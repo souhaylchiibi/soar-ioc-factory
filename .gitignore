@@ -1,0 +1,40 @@
+# ── Secrets — JAMAIS commités ─────────────────────────────
+*.pem
+*.key
+.env
+.env.*
+!.env.example
+*.p12
+*.pfx
+credentials.json
+aws-credentials
+~/.aws/
+
+# ── Python ────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ── Node / Frontend ───────────────────────────────────────
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# ── Docker / données locales ──────────────────────────────
+*.log
+docker-compose.override.yml
+volume-data/
+
+# ── Éditeurs / OS ─────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
