@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>SOAR IOC Factory — Audit PHASE 0</title>
+<style>
+  :root { --bg:#0b1220; --card:#131c2e; --line:#223049; --txt:#e6edf7; --mut:#8fa3bf;
+          --ok:#22c55e; --warn:#f59e0b; --err:#ef4444; --acc:#38bdf8; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--txt); font-family:"Segoe UI",system-ui,sans-serif; padding:34px; }
+  header { display:flex; align-items:center; gap:16px; border-bottom:2px solid var(--line); padding-bottom:18px; margin-bottom:24px; }
+  .logo { width:52px; height:52px; border-radius:12px; background:linear-gradient(135deg,#0ea5e9,#6366f1);
+          display:grid; place-items:center; font-size:26px; }
+  h1 { font-size:26px; } h1 span { color:var(--acc); }
+  .sub { color:var(--mut); font-size:13px; margin-top:4px; }
+  .badge { margin-left:auto; background:#064e3b; color:#6ee7b7; border:1px solid #059669;
+           padding:7px 14px; border-radius:999px; font-size:13px; font-weight:600; }
+  .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px; }
+  .kpi { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .kpi .v { font-size:24px; font-weight:700; } .kpi .l { color:var(--mut); font-size:12px; margin-top:5px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; margin-bottom:20px; }
+  h2 { font-size:16px; color:var(--acc); margin-bottom:14px; text-transform:uppercase; letter-spacing:.6px; }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; }
+  th { text-align:left; color:var(--mut); font-weight:600; padding:8px 10px; border-bottom:1px solid var(--line); }
+  td { padding:8px 10px; border-bottom:1px solid rgba(34,48,73,.55); }
+  tr:last-child td { border-bottom:none; }
+  .s { display:inline-block; padding:2px 9px; border-radius:6px; font-size:12px; font-weight:600; }
+  .ok  { background:#052e16; color:#86efac; border:1px solid #166534; }
+  .wn  { background:#2e2305; color:#fcd34d; border:1px solid #854d0e; }
+  .er  { background:#2e0a0a; color:#fca5a5; border:1px solid #7f1d1d; }
+  .nb  { background:#0a1a2e; color:#93c5fd; border:1px solid #1e40af; }
+  .foot { color:var(--mut); font-size:12px; text-align:center; margin-top:26px; }
+  code { background:#0b1220; border:1px solid var(--line); padding:1px 6px; border-radius:5px; color:#a5f3fc; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🛡️</div>
+  <div>
+    <h1>SOAR <span>IOC Factory</span> — Audit PHASE 0</h1>
+    <div class="sub">Environnement de développement · ThinkPad T480s · Windows 10 + WSL2 · 2026-11-06</div>
+  </div>
+  <div class="badge">✔ AUDIT TERMINÉ — AUCUNE MODIFICATION DU SYSTÈME</div>
+</header>
+
+<div class="grid">
+  <div class="kpi"><div class="v">4c / 8T</div><div class="l">Intel i7-8550U</div></div>
+  <div class="kpi"><div class="v">24 Go</div><div class="l">RAM — 11,4 Go libres</div></div>
+  <div class="kpi"><div class="v">76,6 Go</div><div class="l">Disque C: libre</div></div>
+  <div class="kpi"><div class="v" style="color:#22c55e">Docker ✔</div><div class="l">Desktop 4.98 · Compose v5.6.1</div></div>
+</div>
+
+<div class="card">
+  <h2>1 · Outils du système hôte</h2>
+  <table>
+    <tr><th>Outil</th><th>Version</th><th>État</th></tr>
+    <tr><td>Python</td><td>3.11.9 (py, pip 26.1.2)</td><td><span class="s ok">✔ Présent</span></td></tr>
+    <tr><td>Git</td><td>2.51.0 — identité : Souhayl Chouaibi</td><td><span class="s ok">✔ Configuré</span></td></tr>
+    <tr><td>Node.js / npm</td><td>v25.9.0 / 11.14.1</td><td><span class="s ok">✔ Présent</span></td></tr>
+    <tr><td>Docker Desktop</td><td>4.98.0 — client 29.9.2, serveur actif (8 CPU, 12,4 Go)</td><td><span class="s ok">✔ Vérifié</span></td></tr>
+    <tr><td>WSL2 / Ubuntu</td><td>24.04.3 LTS — Python 3.12.3</td><td><span class="s ok">✔ Actif</span></td></tr>
+    <tr><td>AWS CLI</td><td>—</td><td><span class="s nb">→ Phase 8</span></td></tr>
+    <tr><td>psql (hôte)</td><td>—</td><td><span class="s nb">→ Conteneur PostgreSQL</span></td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>2 · Accès aux sources de Threat Intelligence (tests GET/HEAD)</h2>
+  <table>
+    <tr><th>Source</th><th>Résultat</th><th>Conséquence de conception</th></tr>
+    <tr><td>AlienVault OTX</td><td><span class="s ok">200 · joignable</span></td><td>Collecteur sans clé API</td></tr>
+    <tr><td>ThreatFox (abuse.ch)</td><td><span class="s ok">301 · joignable</span></td><td>Collecteur avec clé optionnelle</td></tr>
+    <tr><td>URLhaus (abuse.ch)</td><td><span class="s wn">401 · auth exigée</span></td><td><b>Clé optionnelle + backoff</b>, repli sur sources sans clé</td></tr>
+    <tr><td>AbuseIPDB</td><td><span class="s wn">401 · sans clé</span></td><td>Clé gratuite facultative</td></tr>
+    <tr><td>PyPI / Docker Hub / GitHub / npm</td><td><span class="s ok">OK</span></td><td>Chaîne de build opérationnelle</td></tr>
+    <tr><td>AWS STS</td><td><span class="s ok">302 · joignable</span></td><td>Aucun profil configuré — Phase 8</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>3 · Sécurité & risques</h2>
+  <table>
+    <tr><th>Risque</th><th>Niveau</th><th>Mitigation retenue</th></tr>
+    <tr><td>Clé privée <code>soar-ioc-key.pem</code> dans le dossier projet</td><td><span class="s er">Élevé</span></td><td><b>.gitignore vérifié</b> via <code>git check-ignore</code> — jamais committée</td></tr>
+    <tr><td>RAM : stack complète ≈ 10–12 Go</td><td><span class="s er">Élevé</span></td><td>Profils Docker — MISP/Wazuh/Suricata non simultanés</td></tr>
+    <tr><td>URLhaus exige une authentification (401)</td><td><span class="s wn">Moyen</span></td><td>Clé optionnelle, aucun repli fictif de données</td></tr>
+    <tr><td>Coûts AWS non maîtrisés</td><td><span class="s er">Élevé</span></td><td><b>0 € tant que rien n'est créé</b> — validation écrite obligatoire</td></tr>
+    <tr><td>Exposition PostgreSQL</td><td><span class="s er">Critique</span></td><td>Réseau Docker interne, port 127.0.0.1 max, .env ignoré</td></tr>
+    <tr><td>Intégrité académique</td><td><span class="s er">Critique</span></td><td>IOC synthétiques marqués <code>is_synthetic</code>, résultats mesurés uniquement</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>4 · Décisions arrêtées</h2>
+  <table>
+    <tr><th>#</th><th>Décision</th></tr>
+    <tr><td>1</td><td>Docker Desktop (backend WSL2) — <span class="s ok">installé & validé</span></td></tr>
+    <tr><td>2</td><td>Cible backend : <b>Python 3.11</b> (image python:3.11-slim)</td></tr>
+    <tr><td>3</td><td>Documentation en <b>français</b>, code en anglais</td></tr>
+    <tr><td>4</td><td>Dépôt Git initialisé — 2 commits · secrets exclus</td></tr>
+    <tr><td>5</td><td>Captures d'écran → dossier <code>capture/</code></td></tr>
+  </table>
+</div>
+
+<div class="foot">SOAR IOC Factory — Intelligent Indicator Lifecycle Management · Projet 3 : Usine à indicateurs · Rapport généré par l'audit automatisé PHASE 0</div>
+</body>
+</html>

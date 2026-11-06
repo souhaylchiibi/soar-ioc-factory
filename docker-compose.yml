@@ -1,0 +1,102 @@
+# =====================================================================
+# SOAR IOC Factory — Docker Compose (base)
+# Profils : n8n | misp | detection  →  services optionnels, mémoire maîtrisée
+#   docker compose up -d                      (socle : db + api)
+#   docker compose --profile n8n up -d        (+ orchestration)
+# =====================================================================
+name: soar-ioc-factory
+
+networks:
+  soar-net:
+    driver: bridge
+    internal: false          # pas d'exposition publique des services internes
+
+volumes:
+  pgdata:
+  n8n_data:
+
+services:
+  # ---------------- PostgreSQL (jamais exposé sur Internet) -------------
+  db:
+    image: postgres:16-alpine
+    container_name: soar-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-soar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requis dans .env}
+      POSTGRES_DB: ${POSTGRES_DB:-soar_ioc}
+      TZ: UTC
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infrastructure/docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    # Bind only to loopback of the host: internal network + 127.0.0.1.
+    ports:
+      - "127.0.0.1:5432:5432"
+    networks: [soar-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-soar} -d ${POSTGRES_DB:-soar_ioc}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    deploy:
+      resources:
+        limits: { memory: 768M }
+
+  # ---------------- FastAPI backend -------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.backend
+    container_name: soar-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+    ports:
+      - "127.0.0.1:8000:8000"
+    networks: [soar-net]
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits: { memory: 512M }
+
+  # ---------------- n8n (profil optionnel) ------------------------------
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: soar-n8n
+    restart: unless-stopped
+    profiles: [n8n]
+    environment:
+      N8N_HOST: localhost
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?N8N_ENCRYPTION_KEY requis dans .env}
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: db
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${N8N_DB:-soar_n8n}
+      DB_POSTGRESDB_USER: ${POSTGRES_USER:-soar}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+      GENERIC_TIMEZONE: UTC
+      N8N_DIAGNOSTICS_ENABLED: "false"   # pas de télémétrie dans un labo
+    volumes:
+      - n8n_data:/home/node/.n8n
+    ports:
+      - "127.0.0.1:5678:5678"
+    networks: [soar-net]
+    depends_on:
+      db:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits: { memory: 1G }
