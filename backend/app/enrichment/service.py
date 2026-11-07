@@ -93,7 +93,19 @@ def run_enrichment(
     summary = EnrichmentSummary(ioc_id=str(ioc.id))
     now = datetime.now(timezone.utc)
 
+    # A provider registered twice (misconfiguration) must not produce two
+    # rows for the same (ioc, provider, instant) — first registration wins.
+    seen_names: set[str] = set()
+    unique_providers = []
     for provider in providers:
+        if provider.name in seen_names:
+            logger.warning("duplicate provider name skipped",
+                           extra={"source": provider.name, "action": "ENRICH"})
+            continue
+        seen_names.add(provider.name)
+        unique_providers.append(provider)
+
+    for provider in unique_providers:
         # Cache hit?
         if not force:
             cached = db.execute(
@@ -123,6 +135,9 @@ def run_enrichment(
 
         result.verdict = normalize_verdict(result.verdict) if result.ok else "unknown"
 
+        # Client-side timestamp: `now()` in SQL is the TRANSACTION time, which
+        # would be identical for every row of the same transaction.
+        fetched_at = datetime.now(timezone.utc)
         db.add(Enrichment(
             ioc_id=ioc.id,
             provider=result.provider,
@@ -130,7 +145,8 @@ def run_enrichment(
             verdict=result.verdict,
             reputation=result.reputation,
             is_synthetic=ioc.is_synthetic,
-            expires_at=now + timedelta(hours=ttl_hours),
+            fetched_at=fetched_at,
+            expires_at=fetched_at + timedelta(hours=ttl_hours),
         ))
         summary.results.append(result)
 

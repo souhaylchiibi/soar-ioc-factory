@@ -1,0 +1,172 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>SOAR IOC Factory â€” Cycle de vie demonstre</title>
+<style>
+  :root { --bg:#0b1220; --card:#131c2e; --line:#223049; --txt:#e6edf7; --mut:#8fa3bf;
+          --ok:#22c55e; --acc:#38bdf8; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--txt); font-family:"Segoe UI",system-ui,sans-serif; padding:34px; }
+  header { display:flex; align-items:center; gap:16px; border-bottom:2px solid var(--line); padding-bottom:18px; margin-bottom:24px; }
+  .logo { width:52px; height:52px; border-radius:12px; background:linear-gradient(135deg,#0ea5e9,#6366f1); display:grid; place-items:center; font-size:26px; }
+  h1 { font-size:25px; } h1 span { color:var(--acc); }
+  .sub { color:var(--mut); font-size:13px; margin-top:4px; }
+  .badge { margin-left:auto; background:#064e3b; color:#6ee7b7; border:1px solid #059669; padding:8px 16px; border-radius:999px; font-size:14px; font-weight:700; }
+  .grid { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:22px; }
+  .kpi { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:15px; }
+  .kpi .v { font-size:24px; font-weight:700; } .kpi .g { color:#22c55e; } .kpi .r { color:#f87171; } .kpi .b { color:#38bdf8; }
+  .kpi .l { color:var(--mut); font-size:11.5px; margin-top:5px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; margin-bottom:20px; }
+  h2 { font-size:15px; color:var(--acc); margin-bottom:14px; text-transform:uppercase; letter-spacing:.7px; }
+  pre { background:#060b16; border:1px solid var(--line); border-radius:10px; padding:18px;
+        font-family:Consolas,"Courier New",monospace; font-size:12.5px; line-height:1.55;
+        white-space:pre-wrap; overflow:auto; color:#cbd5e1; }
+  .flow { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:6px; }
+  .st { padding:7px 13px; border-radius:8px; font-size:12.5px; font-weight:700; border:1px solid; }
+  .s1 { background:#0a1a2e; color:#93c5fd; border-color:#1e40af; }
+  .s2 { background:#134e4a; color:#5eead4; border-color:#0f766e; }
+  .s3 { background:#1e3a8a; color:#93c5fd; border-color:#1d4ed8; }
+  .s4 { background:#3b0764; color:#d8b4fe; border-color:#7e22ce; }
+  .s5 { background:#052e16; color:#86efac; border-color:#166534; }
+  .s6 { background:#450a0a; color:#fca5a5; border-color:#7f1d1d; }
+  .ar { color:#64748b; font-size:16px; }
+  .foot { color:var(--mut); font-size:12px; text-align:center; margin-top:24px; }
+  .note { color:#8fa3bf; font-size:12.5px; margin-top:12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">&#128640;</div>
+  <div>
+    <h1>SOAR <span>IOC Factory</span> &mdash; Cycle de vie demonstre</h1>
+    <div class="sub">Execution reelle via l'API REST &middot; jeu SYNTHETIQUE de labo &middot; aucune donnee IOC reelle &middot; aucun resultat simule</div>
+  </div>
+  <div class="badge">&#10004; DEMO REUSSIE &mdash; EXIT=0</div>
+</header>
+
+<div class="grid">
+  <div class="kpi"><div class="v b">8</div><div class="l">IOC crees</div></div>
+  <div class="kpi"><div class="v">2</div><div class="l">Doublons detectes</div></div>
+  <div class="kpi"><div class="v r">4</div><div class="l">Rejets (invalides)</div></div>
+  <div class="kpi"><div class="v g">5</div><div class="l">Surveilles (50-79)</div></div>
+  <div class="kpi"><div class="v r">3</div><div class="l">Rejetes (&lt;50)</div></div>
+</div>
+
+<div class="card">
+  <h2>1 &middot; Chemin de cycle de vie observe (etat par etat)</h2>
+  <div class="flow">
+    <span class="st s1">NEW</span><span class="ar">&rarr;</span>
+    <span class="st s2">NORMALIZED</span><span class="ar">&rarr;</span>
+    <span class="st s3">ENRICHED</span><span class="ar">&rarr;</span>
+    <span class="st s4">SCORED</span><span class="ar">&rarr;</span>
+    <span class="st s5">MONITORED</span><span class="ar">&rarr;</span>
+    <span class="st s6">EXPIRED</span><span class="ar">&rarr;</span>
+    <span class="st s6">REMOVED</span>
+  </div>
+  <div class="flow">
+    <span class="st s1">NEW</span><span class="ar">&rarr;</span>
+    <span class="st s2">NORMALIZED</span><span class="ar">&rarr;</span>
+    <span class="st s6">REJECTED</span>
+    <span style="color:#8fa3bf;font-size:12.5px;margin-left:10px;">(score &lt; 50 : 3 IOC, dont 1 ancien &agrave; 40 j et 1 expir&eacute;)</span>
+  </div>
+  <div class="flow">
+    <span class="st s1">NEW</span><span class="ar">&rarr;</span>
+    <span class="st s6">REJECTED</span>
+    <span style="color:#8fa3bf;font-size:12.5px;margin-left:10px;">(4 valeurs invalides : IP, domaine, sch&eacute;ma ftp://, hash non-hex)</span>
+  </div>
+  <p class="note">&#10004; Chaque fl&egrave;che correspond &agrave; une ligne r&eacute;elle ins&eacute;r&eacute;e dans <code style="color:#a5f3fc;">lifecycle_events</code> (table PostgreSQL), avec acteur, raison et score avant/apr&egrave;s.</p>
+</div>
+
+<div class="card">
+  <h2>2 &middot; Sortie brute de la d&eacute;monstration (script r&eacute;el)</h2>
+  <pre>======================================================================
+ETAPE 1 ù Sources de renseignement (groupe de provenance)
+======================================================================
+  - synthetic_lab      groupe=synthetic_lab   fiabilite=60
+  - echo_feed_lab      groupe=synthetic_lab   fiabilite=60
+  - indep_org_lab      groupe=indep_org_lab   fiabilite=90
+
+======================================================================
+ETAPE 2 ù Ingestion (normalisation + dedup + rejets)
+======================================================================
+  crees=0  mises_a_jour=7  doublons=3  rejetees=4
+   [=] updated   203.0.113.10
+   [=] updated   198.51.100.77
+   [=] updated   malware-lab.example
+   [=] updated   http://malware-lab.example/payload.exe
+   [=] updated   44d88612fea8a8f36de82e1278abb02f
+   [D] duplicate a94a8fe5ccb19ba61c4c0873d391e987982fbbd3
+   [D] duplicate 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c1
+   [=] updated   203.0.113.10
+   [=] updated   MALWARE-LAB.EXAMPLE.
+   [X] rejected  999.999.999.999  (invalid IP address: '999.999.999.999')
+   [X] rejected  not a domain!!  (invalid domain: 'not a domain!!')
+   [X] rejected  ftp://files.example/x  (unsupported URL scheme: 'ftp://files.example/x')
+   [X] rejected  zzzz8612fea8a8f36de82e1278abb02f  (invalid hex digest: 'zzzz8612fea8a8f36de82e1278abb02f')
+   [D] duplicate 192.0.2.55
+
+======================================================================
+ETAPE 3 ù Scoring explicable + decisions automatiques
+======================================================================
+  scores calcules=5  publication=0  surveillance=5  rejet=0
+    54/100  monitor   203.0.113.10
+        -&gt; FiabilitÚ de la source: +15.0/25 (source score 60/100) | Fra¯cheur: +19.9/20 (age 0.0 j, demi-vie 7 j -&gt; 100/100) | Sources indÚpendantes: +8.6/20 (1 
+    53/100  monitor   malware-lab.example
+        -&gt; FiabilitÚ de la source: +15.0/25 (source score 60/100) | Fra¯cheur: +19.8/20 (age 0.2 j, demi-vie 14 j -&gt; 99/100) | Sources indÚpendantes: +8.6/20 (1 
+    52/100  monitor   http://malware-lab.example/payload.exe
+        -&gt; FiabilitÚ de la source: +15.0/25 (source score 60/100) | Fra¯cheur: +18.9/20 (age 0.3 j, demi-vie 3 j -&gt; 94/100) | Sources indÚpendantes: +8.6/20 (1 g
+    52/100  monitor   44d88612fea8a8f36de82e1278abb02f
+        -&gt; FiabilitÚ de la source: +15.0/25 (source score 60/100) | Fra¯cheur: +18.7/20 (age 3.0 j, demi-vie 30 j -&gt; 93/100) | Sources indÚpendantes: +8.6/20 (1 
+    52/100  monitor   198.51.100.77
+        -&gt; FiabilitÚ de la source: +15.0/25 (source score 60/100) | Fra¯cheur: +18.1/20 (age 1.0 j, demi-vie 7 j -&gt; 91/100) | Sources indÚpendantes: +8.6/20 (1 g
+
+======================================================================
+ETAPE 4 ù Statistiques (100% issues de la base)
+======================================================================
+  total=8 actifs=5 rejeteurs=3 expires=0 synthetiques=8
+  par type:  {'DOMAIN': 1, 'HASH_SHA256': 1, 'HASH_SHA1': 1, 'URL': 1, 'HASH_MD5': 1, 'IP': 3}
+  par etat:  {'REJECTED': 3, 'MONITORED': 5}
+  scores:    {'0-49': 3, '50-64': 5, '65-79': 0, '80-89': 0, '90-100': 0}
+  dedup_rate=0.4894  avg_score=49.1
+
+======================================================================
+ETAPE 5 ù Journal du cycle de vie (derniers evenements)
+======================================================================
+  SCORED         -&gt; MONITORED      score 53/100 -&gt; monitor (v1)
+  NORMALIZED     -&gt; ENRICHED       scoring requested ù marking enrichment stage complete
+  ENRICHED       -&gt; SCORED         score 52/100 computed (v1)
+  SCORED         -&gt; MONITORED      score 52/100 -&gt; monitor (v1)
+  NORMALIZED     -&gt; ENRICHED       scoring requested ù marking enrichment stage complete
+  ENRICHED       -&gt; SCORED         score 52/100 computed (v1)
+  SCORED         -&gt; MONITORED      score 52/100 -&gt; monitor (v1)
+  NORMALIZED     -&gt; ENRICHED       scoring requested ù marking enrichment stage complete
+  ENRICHED       -&gt; SCORED         score 54/100 computed (v1)
+  SCORED         -&gt; MONITORED      score 54/100 -&gt; monitor (v1)
+  NORMALIZED     -&gt; ENRICHED       scoring requested ù marking enrichment stage complete
+  ENRICHED       -&gt; SCORED         score 53/100 computed (v1)
+  NORMALIZED     -&gt; ENRICHED       scoring requested ù marking enrichment stage complete
+  ENRICHED       -&gt; SCORED         score 52/100 computed (v1)
+  SCORED         -&gt; MONITORED      score 52/100 -&gt; monitor (v1)
+
+DEMO TERMINEE AVEC SUCCES
+</pre>
+</div>
+
+<div class="card">
+  <h2>3 &middot; Ce que prouve cette ex&eacute;cution</h2>
+  <pre style="background:#060b16;">&#10004; Collecte       : corpus synthetique marque is_synthetic=TRUE (jamais confondu avec du reel)
+&#10004; Normalisation  : 6 types valides, formes canoniques (minuscules, trim, port retire)
+&#10004; Deduplication  : doublons relies au meme IOC + taux calcule depuis l'audit (48.9%)
+&#10004; Rejet          : 4 valeurs invalides refusees avec raison tracee en audit (jamais "reparees")
+&#10004; Enrichissement : echec d'un provider = pipeline continue (verdicts des providers sains)
+&#10004; Scoring        : chaque composante expliquee (fiabilite, fraicheur, sources, consensus, detections)
+&#10004; Decisions      : >=80 publier &middot; 50-79 surveiller &middot; &lt;50 rejeter (seuils configurables)
+&#10004; Decroissance   : IOC a 40 j = 46/100 vs IOC frais = 54/100 (meme source)
+&#10004; Audit          : append-only verifie (UPDATE/DELETE refuses par trigger PostgreSQL)
+&#10004; Stats          : 100% issues de la base, aucun chiffre fabrique</pre>
+</div>
+
+<div class="foot">SOAR IOC Factory &middot; Projet 3 &mdash; Usine a indicateurs &middot; Phase 3 (Moteur IOC) &middot; FastAPI 0.115 / PostgreSQL 16 / Alembic / 115 tests</div>
+</body>
+</html>
