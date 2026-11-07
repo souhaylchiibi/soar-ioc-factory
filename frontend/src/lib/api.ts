@@ -7,6 +7,13 @@
 
 const BASE = "/api/v1";
 
+/** Fetch outside the versioned prefix (health probes live at the root). */
+async function rawGet<T>(path: string): Promise<T> {
+  const res = await fetch(path, { headers: { Accept: "application/json" } });
+  if (!res.ok) throw new ApiError(res.status, res.statusText);
+  return (await res.json()) as T;
+}
+
 export class ApiError extends Error {
   status: number;
   constructor(status: number, message: string) {
@@ -206,8 +213,9 @@ export const api = {
   report: (date?: string) =>
     get<{ report_id: string; date: string; generated_at: string; payload: any }>(
       `/reports/daily${date ? `?report_date=${date}` : ""}`),
-  liveness: () => get<{ status: string }>("/health"),
-  readiness: () => get<{ status: string; database: { status: string } }>("/ready"),
+  liveness: () => rawGet<{ status: string }>("/health"),
+  readiness: () =>
+    rawGet<{ status: string; database: { status: string } }>("/ready"),
 };
 
 /* helpers */

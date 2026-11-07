@@ -14,7 +14,7 @@ const NAV: { to: string; label: string; icon: string }[] = [
   { to: "/workflows", label: "Automation Workflows", icon: "⚡" },
   { to: "/audit", label: "Audit Logs", icon: "▤" },
   { to: "/reports", label: "Reports", icon: "▥" },
-  { to: "/health", label: "System Health", icon: "♥" },
+  { to: "/system-health", label: "System Health", icon: "♥" },
 ];
 
 export default function Layout() {

@@ -30,7 +30,7 @@ export default function App() {
         <Route path="/workflows" element={<Workflows />} />
         <Route path="/audit" element={<AuditLogs />} />
         <Route path="/reports" element={<Reports />} />
-        <Route path="/health" element={<SystemHealth />} />
+        <Route path="/system-health" element={<SystemHealth />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
