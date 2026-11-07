@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>SOAR IOC Factory — Tests PHASE 3</title>
+<style>
+  :root { --bg:#0b1220; --card:#131c2e; --line:#223049; --txt:#e6edf7; --mut:#8fa3bf;
+          --ok:#22c55e; --warn:#f59e0b; --err:#ef4444; --acc:#38bdf8; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--txt); font-family:"Segoe UI",system-ui,sans-serif; padding:34px; }
+  header { display:flex; align-items:center; gap:16px; border-bottom:2px solid var(--line); padding-bottom:18px; margin-bottom:24px; }
+  .logo { width:52px; height:52px; border-radius:12px; background:linear-gradient(135deg,#0ea5e9,#6366f1);
+          display:grid; place-items:center; font-size:26px; }
+  h1 { font-size:25px; } h1 span { color:var(--acc); }
+  .sub { color:var(--mut); font-size:13px; margin-top:4px; }
+  .badge { margin-left:auto; background:#064e3b; color:#6ee7b7; border:1px solid #059669;
+           padding:8px 16px; border-radius:999px; font-size:14px; font-weight:700; }
+  .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:22px; }
+  .kpi { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .kpi .v { font-size:26px; font-weight:700; } .kpi .v.g { color:#22c55e; }
+  .kpi .l { color:var(--mut); font-size:12px; margin-top:5px; }
+  .bar { height:9px; background:#0b1220; border:1px solid var(--line); border-radius:6px; overflow:hidden; margin-top:10px; }
+  .bar > i { display:block; height:100%; background:linear-gradient(90deg,#22c55e,#4ade80); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; margin-bottom:20px; }
+  h2 { font-size:15px; color:var(--acc); margin-bottom:14px; text-transform:uppercase; letter-spacing:.7px; }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; }
+  th { text-align:left; color:var(--mut); font-weight:600; padding:9px 10px; border-bottom:1px solid var(--line); }
+  td { padding:9px 10px; border-bottom:1px solid rgba(34,48,73,.55); }
+  tr:last-child td { border-bottom:none; }
+  .s { display:inline-block; padding:2px 9px; border-radius:6px; font-size:12px; font-weight:600; }
+  .ok  { background:#052e16; color:#86efac; border:1px solid #166534; }
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  code { background:#0b1220; border:1px solid var(--line); padding:1px 6px; border-radius:5px; color:#a5f3fc; font-size:12.5px; }
+  ul { list-style:none; } li { padding:7px 0; border-bottom:1px solid rgba(34,48,73,.5); font-size:13.5px; }
+  li:last-child { border-bottom:none; }
+  li b { color:#a5f3fc; }
+  .foot { color:var(--mut); font-size:12px; text-align:center; margin-top:26px; }
+  .tick { color:#4ade80; font-weight:700; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🧪</div>
+  <div>
+    <h1>SOAR <span>IOC Factory</span> — Rapport de tests · PHASE 3</h1>
+    <div class="sub">Moteur IOC : normalisation · déduplication · cycle de vie · scoring · ingestion réelle PostgreSQL</div>
+  </div>
+  <div class="badge">✔ 104 / 104 RÉUSSIS — 0 ÉCHEC</div>
+</header>
+
+<div class="grid">
+  <div class="kpi"><div class="v g">104</div><div class="l">Tests exécutés</div><div class="bar"><i style="width:100%"></i></div></div>
+  <div class="kpi"><div class="v g">100 %</div><div class="l">Taux de réussite</div><div class="bar"><i style="width:100%"></i></div></div>
+  <div class="kpi"><div class="v">0</div><div class="l">Échec / erreur</div><div class="bar"><i style="width:0%"></i></div></div>
+  <div class="kpi"><div class="v">15,6 s</div><div class="l">Durée totale</div><div class="bar"><i style="width:35%"></i></div></div>
+</div>
+
+<div class="card">
+  <h2>1 · Détail par module de test</h2>
+  <table>
+    <tr><th>Fichier de test</th><th>Couvert</th><th>Réussis</th><th>Échecs</th><th>État</th></tr>
+    <tr><td><code>test_normalization.py</code></td><td>IP, Domaines, URL, Hash, empreintes</td><td>35</td><td>0</td><td><span class="s ok">✔ PASS</span></td></tr>
+    <tr><td><code>test_lifecycle.py</code></td><td>Transitions légales/illégales, bornes de risque</td><td>23</td><td>0</td><td><span class="s ok">✔ PASS</span></td></tr>
+    <tr><td><code>test_ingest.py</code></td><td>Pipeline réel sur PostgreSQL (intégration)</td><td>21</td><td>0</td><td><span class="s ok">✔ PASS</span></td></tr>
+    <tr><td><code>test_scoring.py</code></td><td>Explicabilité, décroissance, anti-collusion</td><td>18</td><td>0</td><td><span class="s ok">✔ PASS</span></td></tr>
+    <tr><td><code>test_health.py</code></td><td>Healthchecks, config, logs JSON</td><td>7</td><td>0</td><td><span class="s ok">✔ PASS</span></td></tr>
+    <tr><th>Total</th><th>—</th><th>104</th><th>0</th><th><span class="s ok">✔ 100 %</span></th></tr>
+  </table>
+</div>
+
+<div class="cols">
+  <div class="card">
+    <h2>2 · Validations critiques prouvées</h2>
+    <ul>
+      <li><span class="tick">✔</span> <b>Déduplication canonique</b> — « Evil.Example. » ≡ « evil.example » → 1 seul IOC</li>
+      <li><span class="tick">✔</span> <b>Rejet, jamais réparation</b> — IP 999.999.999.999, hash non-hex, schéma ftp:// refusés</li>
+      <li><span class="tick">✔</span> <b>Anti-collusion</b> — 2 flux d'un même groupe = 1 source indépendante</li>
+      <li><span class="tick">✔</span> <b>Décroissance temporelle</b> — demi-vie 7 j (IP) vérifiée : score ÷ 2 à T+7j</li>
+      <li><span class="tick">✔</span> <b>Score borné 0–100</b>, composantes ≤ leur poids</li>
+      <li><span class="tick">✔</span> <b>Faux positifs</b> — pénalité appliquée et plafonnée, expliquée</li>
+      <li><span class="tick">✔</span> <b>Transitions illégales bloquées</b> — REMOVED/REJECTED/DUPLICATE sont fermés</li>
+      <li><span class="tick">✔</span> <b>Audit append-only</b> — UPDATE/DELETE refusés par trigger PostgreSQL</li>
+      <li><span class="tick">✔</span> <b>Aucune date inventée</b> — expires_at = NULL si la source ne fournit rien</li>
+      <li><span class="tick">✔</span> <b>Synthétique marqué</b> — is_synthetic=TRUE persistant, jamais confondu avec du réel</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>3 · Architecture vérifiée en conditions réelles</h2>
+    <ul>
+      <li><span class="tick">✔</span> <b>PostgreSQL 16 en conteneur</b> — tests d'intégration sur base dédiée <code>soar_ioc_test</code></li>
+      <li><span class="tick">✔</span> <b>Migrations Alembic</b> — <code>alembic check</code> : aucun écart modèles ↔ base</li>
+      <li><span class="tick">✔</span> <b>13 tables</b> + types énumérés + index + contraintes CHECK</li>
+      <li><span class="tick">✔</span> <b>Trigger SQL</b> <code>trg_audit_immutable</code> actif sur <code>audit_logs</code></li>
+      <li><span class="tick">✔</span> <b>Piste d'audit</b> — chaque ingestion écrit NORMALIZE + DEDUP</li>
+      <li><span class="tick">✔</span> <b>Cycle de vie</b> — événement NEW → NORMALIZED enregistré automatiquement</li>
+      <li><span class="tick">✔</span> <b>Provenance</b> — liens IOC ↔ sources avec <code>provenance_group</code></li>
+      <li><span class="tick">✔</span> <b>Healthchecks Docker</b> — api + postgres « healthy » en continu</li>
+      <li><span class="tick">✔</span> <b>Sécurité</b> — <code>.env</code>, clés <code>*.pem</code> exclus du versionnement</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card">
+  <h2>4 · Bugs réellement détectés puis corrigés par la suite de tests</h2>
+  <table>
+    <tr><th>#</th><th>Bug trouvé par</th><th>Symptôme</th><th>Correction</th></tr>
+    <tr><td>1</td><td><code>test_more_sources_increase_but_saturate</code></td><td>Score = 100 au lieu de 90 : composante <i>sources</i> dépassait son poids au-delà du max</td><td>Clamp <code>min(100, ratio)</code> dans <code>_independent_sources_score()</code></td></tr>
+    <tr><td>2</td><td><code>test_invalid_domain[http://ok.example/path]</code></td><td>Une URL fournie en DOMAIN était « réparée » en domaine</td><td><code>normalize_domain()</code> rejette désormais <code>://</code> — jamais de réparation silencieuse</td></tr>
+    <tr><td>3</td><td><code>TestDeduplication</code> (intégration)</td><td><code>UniqueViolation</code> sur <code>ioc_sources</code> : lien non visible (autoflush désactivé)</td><td><code>db.flush()</code> avant SELECT dans <code>_link_source()</code></td></tr>
+    <tr><td>4</td><td><code>TestAuditImmutability</code></td><td>UPDATE raté abortait la transaction : DELETE testé en transaction morte</td><td>Rollback entre les deux assertions</td></tr>
+    <tr><td>5</td><td><code>INSERT audit_logs</code></td><td>Colonnes <code>detail/success</code> sans DEFAULT côté base</td><td><code>server_default</code> ajoutés aux modèles + migration régénérée</td></tr>
+    <tr><td>6</td><td>Vérification schéma</td><td>Trigger append-only absent de la migration générée</td><td>Trigger + fonction SQL intégrés à la migration initiale</td></tr>
+  </table>
+  <p style="color:#8fa3bf;font-size:12.5px;margin-top:12px;">Ces bugs ont été trouvés par l'exécution réelle des tests — aucun résultat n'est simulé.</p>
+</div>
+
+<div class="foot">SOAR IOC Factory · Projet 3 — Usine à indicateurs · Phase 3 (Moteur IOC) · pytest 8.3.4 / Python 3.11.9 / PostgreSQL 16 / Docker 29.9.2</div>
+</body>
+</html>
