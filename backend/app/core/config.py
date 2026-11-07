@@ -45,6 +45,8 @@ class Settings(BaseSettings):
     # --- Integrations (optional API keys — sources work without them) ---
     otx_api_key: str = ""
     abuseipdb_api_key: str = ""
+    # abuse.ch Auth-Key (portail auth.abuse.ch) — requis pour URLhaus/ThreatFox
+    abusech_auth_key: str = ""
     misp_url: str = ""
     misp_key: str = ""
     misp_verify_cert: bool = False

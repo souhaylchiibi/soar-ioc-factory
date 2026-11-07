@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+/* SOC dark theme — matches the exported report style. */
+@theme {
+  --color-void: #0b1220;
+  --color-panel: #131c2e;
+  --color-edge: #223049;
+  --color-ink: #e6edf7;
+  --color-muted: #8fa3bf;
+  --color-signal: #38bdf8;
+  --color-good: #22c55e;
+  --color-warn: #f59e0b;
+  --color-bad: #ef4444;
+  --color-violet: #c084fc;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-void);
+  color: var(--color-ink);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Shared primitives */
+.card {
+  @apply bg-panel border border-edge rounded-xl p-5;
+}
+.card-title {
+  @apply text-signal text-[13px] font-semibold uppercase tracking-wider mb-4;
+}
+.kpi-value {
+  @apply text-2xl font-bold;
+}
+.kpi-label {
+  @apply text-muted text-xs mt-1;
+}
+.table-th {
+  @apply text-left text-muted text-[11px] font-semibold uppercase tracking-wide px-3 py-2 border-b border-edge;
+}
+.table-td {
+  @apply px-3 py-2 border-b border-edge/50 text-sm;
+}
+.badge {
+  @apply inline-block px-2 py-0.5 rounded text-[11px] font-semibold border;
+}
+.badge-ok {
+  @apply border-green-800 bg-green-950 text-green-300;
+}
+.badge-warn {
+  @apply border-amber-800 bg-amber-950 text-amber-300;
+}
+.badge-bad {
+  @apply border-red-800 bg-red-950 text-red-300;
+}
+.badge-info {
+  @apply border-blue-800 bg-blue-950 text-blue-300;
+}
+.badge-violet {
+  @apply border-purple-800 bg-purple-950 text-purple-300;
+}
+.mono {
+  font-family: Consolas, "Courier New", monospace;
+}
+
+/* Recharts tweaks for the dark theme */
+.recharts-text {
+  fill: #8fa3bf;
+  font-size: 11px;
+}
+.recharts-cartesian-grid line {
+  stroke: #223049;
+}
+.recharts-tooltip-wrapper {
+  outline: none;
+}

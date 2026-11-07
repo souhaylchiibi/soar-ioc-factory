@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import health, iocs, operations
+from app.api import dashboard, health, iocs, operations
 from app.core.config import settings
 from app.core.db import engine
 from app.core.logging import get_logger, setup_logging
@@ -52,6 +52,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(iocs.router, prefix=settings.api_prefix)
     app.include_router(operations.router, prefix=settings.api_prefix)
+    app.include_router(dashboard.router, prefix=settings.api_prefix)
 
     return app
 
