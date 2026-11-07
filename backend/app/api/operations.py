@@ -52,6 +52,7 @@ def collect_run(
     """
     from app.collectors.blocklist_de import BlocklistDeCollector
     from app.collectors.feodo import FeodoCollector
+    from app.collectors.otx import OtxCollector
     from app.collectors.urlscan import UrlscanCollector
     from app.services.ingest import ingest_raw
 
@@ -59,6 +60,8 @@ def collect_run(
         "feodotracker": FeodoCollector,
         "blocklist_de": BlocklistDeCollector,
         "urlscan": UrlscanCollector,
+        # OTX: uses /pulses/subscribed when OTX_API_KEY set (verified live)
+        "alienvault_otx": lambda: OtxCollector(api_key=settings.otx_api_key),
     }
     if source:
         if source not in catalogue:
@@ -296,8 +299,15 @@ def enrich_run(
         .limit(limit)
     ).scalars().all()
 
-    # OTX works without an API key — always available (rate limits apply).
+    # OTX works without a key (rate-limited); with a key it unlocks
+    # /pulses/subscribed (verified live). AbuseIPDB requires its key.
     providers: list[Any] = [OtxEnrichmentProvider(api_key=settings.otx_api_key)]
+    if settings.abuseipdb_api_key:
+        try:
+            from app.enrichment.abuseipdb import AbuseIpdbProvider
+            providers.append(AbuseIpdbProvider(api_key=settings.abuseipdb_api_key))
+        except ValueError as exc:  # pragma: no cover - config guard
+            logger.warning("abuseipdb skipped", extra={"action": "ENRICH"})
 
     enriched, failed = 0, 0
     results = []

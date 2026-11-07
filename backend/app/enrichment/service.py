@@ -106,6 +106,12 @@ def run_enrichment(
         unique_providers.append(provider)
 
     for provider in unique_providers:
+        # A provider that does not support this IOC type is skipped silently:
+        # "not applicable" is not an error (e.g. AbuseIPDB is IP-only).
+        supports = getattr(provider, "supports", None)
+        if supports is not None and not supports(ioc):
+            continue
+
         # Cache hit?
         if not force:
             cached = db.execute(
