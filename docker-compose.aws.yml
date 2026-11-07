@@ -1,0 +1,35 @@
+# =====================================================================
+# Déploiement AWS EC2 (SOAR-IOC-SERVER) — override du compose principal.
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.aws.yml up -d --build
+#
+# SÉCURITÉ (choix validés):
+#   * Aucun port publié sur 0.0.0.0 : le frontend est publié sur
+#     127.0.0.1:80 UNIQUEMENT -> accès par tunnel SSH uniquement.
+#   * PostgreSQL reste sur le réseau interne soar-net (jamais publié).
+#   * n8n n'est PAS publié non plus (127.0.0.1:5678 au besoin).
+#   * Aucun changement de security group nécessaire.
+# =====================================================================
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.frontend
+    container_name: soar-frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:80:80"     # SSH tunnel target ONLY (never public)
+    networks: [soar-net]
+    depends_on:
+      api:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits: { memory: 128M }
+
+  # PostgreSQL: remove the host port entirely on the server (internal only).
+  db:
+    ports: !override []
+
+  n8n:
+    ports: !override ["127.0.0.1:5678:5678"]

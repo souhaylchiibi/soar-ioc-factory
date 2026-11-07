@@ -156,19 +156,22 @@ def system_health(db: Session = Depends(get_db)) -> dict[str, Any]:
     except Exception as exc:
         checks["audit_append_only"] = {"status": "error", "detail": str(exc)[:200]}
 
-    # 4. Intelligence sources
-    src_total, src_enabled, src_key_required = db.execute(
-        select(
-            func.count(IntelSource.id),
-            func.count(IntelSource.id).filter(IntelSource.enabled.is_(True)),
-            func.count(IntelSource.id).filter(IntelSource.requires_api_key.is_(True)),
-        )
-    ).one()
-    checks["intel_sources"] = {
-        "status": "ok" if int(src_enabled) > 0 else "warning",
-        "total": int(src_total), "enabled": int(src_enabled),
-        "require_key": int(src_key_required),
-    }
+    # 4. Intelligence sources (table may not exist on a fresh DB)
+    try:
+        src_total, src_enabled, src_key_required = db.execute(
+            select(
+                func.count(IntelSource.id),
+                func.count(IntelSource.id).filter(IntelSource.enabled.is_(True)),
+                func.count(IntelSource.id).filter(IntelSource.requires_api_key.is_(True)),
+            )
+        ).one()
+        checks["intel_sources"] = {
+            "status": "ok" if int(src_enabled) > 0 else "warning",
+            "total": int(src_total), "enabled": int(src_enabled),
+            "require_key": int(src_key_required),
+        }
+    except Exception as exc:
+        checks["intel_sources"] = {"status": "error", "detail": str(exc)[:200]}
 
     # 5. API keys present (lengths only — values never leave the server)
     checks["api_keys"] = {
@@ -186,12 +189,15 @@ def system_health(db: Session = Depends(get_db)) -> dict[str, Any]:
         stale = (datetime.now(timezone.utc) - last_audit) > timedelta(hours=24)
     checks["activity_freshness"] = {"status": "stale" if stale else "ok"}
 
-    # 7. Inventory snapshot
-    counts = dict(db.execute(
-        select(Ioc.status, func.count(Ioc.id)).group_by(Ioc.status)
-    ).all())
-    checks["inventory"] = {k.value if hasattr(k, "value") else str(k): int(v)
-                           for k, v in counts.items()}
+    # 7. Inventory snapshot (fresh DB => empty, never an exception)
+    try:
+        counts = db.execute(
+            select(Ioc.status, func.count(Ioc.id)).group_by(Ioc.status)
+        ).all()
+        checks["inventory"] = {k.value if hasattr(k, "value") else str(k): int(v)
+                               for k, v in counts}
+    except Exception as exc:
+        checks["inventory"] = {"error": str(exc)[:200]}
 
     degraded = [name for name, c in checks.items()
                 if isinstance(c, dict) and c.get("status") in ("error", "warning")]

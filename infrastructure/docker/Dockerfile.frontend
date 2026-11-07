@@ -1,0 +1,13 @@
+# Frontend production image: static build served by nginx.
+# Build context = repository root (dist/ is produced by `npm run build`).
+FROM nginx:1.27-alpine AS runtime
+
+COPY infrastructure/docker/nginx.conf /etc/nginx/conf.d/default.conf
+COPY frontend/dist /usr/share/nginx/html
+
+# Run as unprivileged where possible (nginx image supports nginx user on 8080,
+# but we keep port 80 inside the container — it is never published publicly).
+HEALTHCHECK --interval=20s --timeout=5s --retries=3 \
+    CMD wget -q -O /dev/null http://127.0.0.1/health || exit 1
+
+EXPOSE 80
