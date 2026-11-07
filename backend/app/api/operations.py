@@ -414,6 +414,22 @@ def publish_run(
 
 
 # -------------------------------------------------------------- expiration --
+@router.post("/iocs/publish/misp/run")
+def publish_misp_run(
+    db: Session = Depends(get_db),
+    limit: int = Query(100, ge=1, le=500),
+) -> dict[str, Any]:
+    """Workflow 5 (MISP leg): publish PUBLISHED IOCs to MISP, verified.
+
+    Without MISP_URL/MISP_KEY the endpoint reports `skipped` (never fakes a
+    success). With them, each attribute is confirmed by read-back before the
+    publication row is marked `verified`.
+    """
+    from app.services.misp_ops import publish_pending_to_misp
+
+    return publish_pending_to_misp(db, limit=limit)
+
+
 @router.post("/iocs/expire/run")
 def expire_run(db: Session = Depends(get_db)) -> dict[str, Any]:
     """Workflow 7: mark due indicators EXPIRED (removal is separate+verified)."""
@@ -435,19 +451,29 @@ def remove_run(db: Session = Depends(get_db)) -> dict[str, Any]:
         select(Ioc).where(Ioc.status == IocStatus.EXPIRED)
     ).scalars().all()
 
+    from app.services import misp_ops
+
     removed, failed = 0, 0
     results = []
     for ioc in expired:
-        # 1. Revoke every active publication.
+        # 1. Revoke every active publication (MISP = remote + verified).
         pubs = db.execute(
             select(Publication).where(
                 Publication.ioc_id == ioc.id, Publication.revoked_at.is_(None)
             )
         ).scalars().all()
         now = datetime.now(timezone.utc)
+
+        remote_ok = True
         for pub in pubs:
-            pub.status = "revoked"
-            pub.revoked_at = now
+            if pub.target == misp_ops.MISP_TARGET:
+                # Remote deletion must be CONFIRMED by MISP (read-back).
+                if not misp_ops.revoke_misp_attribute(db, pub, ioc):
+                    remote_ok = False
+                    continue
+            else:
+                pub.status = "revoked"
+                pub.revoked_at = now
         db.flush()
 
         # 2. Verify revocation by reading back.
@@ -458,10 +484,11 @@ def remove_run(db: Session = Depends(get_db)) -> dict[str, Any]:
             )
         ).scalar() or 0
 
-        if still_active:
+        if still_active or not remote_ok:
             failed += 1
             results.append({"ioc_id": str(ioc.id), "action": "failed",
-                            "error": f"{still_active} publication(s) still active"})
+                            "error": f"{still_active} publication(s) encore actives"
+                                     + ("" if remote_ok else " / MISP retrait non confirme")})
             continue
 
         # 3. Transition with verification proof.

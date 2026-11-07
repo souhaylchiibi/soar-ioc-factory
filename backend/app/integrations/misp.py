@@ -1,0 +1,195 @@
+"""MISP REST API client (integration option B: client + mocked tests).
+
+Contract (official MISP REST API):
+  * auth      : header `Authorization: <API_KEY>` + `Accept/Content-Type: application/json`
+  * health    : GET  /servers/getVersion
+  * event     : POST /events/add           -> {"Event": {"id": ...}}
+                POST /events/{id}/publish
+  * attribute : POST /attributes/add       -> {"Attribute": {"id": ...}}
+                GET  /attributes/view/{id} -> {"Attribute": {...}} | {"error": ...}
+                DELETE /attributes/delete/{id} -> {"message": ...}
+  * attribute types used: ip-src, domain, url, md5, sha1, sha256
+
+Design rules honoured:
+  * success is only claimed after a READ-BACK verification,
+  * every failure raises MispError (recorded as failed, never faked),
+  * TLS verification configurable (MISP_VERIFY_CERT).
+"""
+from __future__ import annotations
+
+from typing import Any, Optional
+
+import httpx
+
+from app.core.logging import get_logger
+from app.models.ioc import Ioc, IocType
+
+logger = get_logger("soar.integrations.misp")
+
+# Our IOC type -> MISP attribute type (standard MISP types).
+MISP_ATTRIBUTE_TYPE = {
+    IocType.IP: "ip-src",
+    IocType.DOMAIN: "domain",
+    IocType.URL: "url",
+    IocType.HASH_MD5: "md5",
+    IocType.HASH_SHA1: "sha1",
+    IocType.HASH_SHA256: "sha256",
+}
+
+MISP_CATEGORY = {
+    IocType.IP: "Network activity",
+    IocType.DOMAIN: "Network activity",
+    IocType.URL: "Network activity",
+    IocType.HASH_MD5: "Payload installation",
+    IocType.HASH_SHA1: "Payload installation",
+    IocType.HASH_SHA256: "Payload installation",
+}
+
+
+class MispError(RuntimeError):
+    """MISP call failed (auth, network, API error). Never swallowed."""
+
+
+class MispClient:
+    """Minimal, dependency-light MISP client (httpx only)."""
+
+    def __init__(
+        self,
+        base_url: str,
+        api_key: str,
+        verify_tls: bool = False,
+        timeout: float = 20.0,
+        transport: Any = None,      # tests inject httpx.MockTransport
+        event_info: str = "SOAR IOC Factory — published indicators",
+    ):
+        if not base_url or not api_key:
+            raise ValueError("MISP client requires base_url and api_key")
+        self.base_url = base_url.rstrip("/")
+        self.api_key = api_key
+        self.verify_tls = verify_tls
+        self.timeout = timeout
+        self.transport = transport
+        self.event_info = event_info
+        self._event_id: Optional[str] = None
+
+    # ------------------------------------------------------------ http -----
+    def _client(self) -> httpx.Client:
+        return httpx.Client(
+            base_url=self.base_url,
+            timeout=self.timeout,
+            verify=self.verify_tls,
+            transport=self.transport,
+            headers={
+                "Authorization": self.api_key,
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "URL": self.base_url,
+                "User-Agent": "soar-ioc-factory/0.1",
+            },
+        )
+
+    def _request(self, method: str, path: str, json_body: dict | None = None) -> dict:
+        try:
+            with self._client() as client:
+                resp = client.request(method, path, json=json_body)
+        except httpx.HTTPError as exc:
+            raise MispError(f"MISP unreachable: {exc}") from exc
+
+        if resp.status_code in (401, 403):
+            raise MispError(f"MISP auth refused ({resp.status_code}) — vérifiez MISP_KEY")
+        try:
+            payload = resp.json() if resp.text else {}
+        except ValueError as exc:
+            raise MispError(f"MISP non-JSON response ({resp.status_code}): {resp.text[:160]}") from exc
+
+        if resp.status_code >= 400:
+            detail = payload.get("error") or payload.get("message") or resp.text[:160]
+            raise MispError(f"MISP {method} {path} -> {resp.status_code}: {detail}")
+
+        return payload if isinstance(payload, dict) else {"data": payload}
+
+    # ---------------------------------------------------------- features ---
+    def health(self) -> str:
+        """GET /servers/getVersion — returns the MISP version string."""
+        payload = self._request("GET", "/servers/getVersion")
+        version = payload.get("version") or (payload.get("Server") or {}).get("version")
+        if not version:
+            raise MispError(f"MISP version inconnue dans la réponse: {str(payload)[:160]}")
+        return str(version)
+
+    def ensure_event(self) -> str:
+        """Create the shared event once (or reuse the configured/created id)."""
+        if self._event_id:
+            return self._event_id
+        payload = self._request("POST", "/events/add", json_body={
+            "Event": {
+                "info": self.event_info,
+                "distribution": "1",       # this community only
+                "threat_level_id": "2",    # medium (actionable IOC feed)
+                "analysis": "1",
+                "comment": "Generated by SOAR IOC Factory — indicators lifecycle",
+            }
+        })
+        event = payload.get("Event") or {}
+        event_id = event.get("id")
+        if not event_id:
+            raise MispError(f"creation d'evenement MISP sans id: {str(payload)[:160]}")
+        self._event_id = str(event_id)
+        return self._event_id
+
+    def add_attribute(self, ioc: Ioc, comment: str = "") -> str:
+        """Add one attribute for the IOC; returns the MISP attribute id."""
+        attr_type = MISP_ATTRIBUTE_TYPE.get(ioc.type)
+        if attr_type is None:
+            raise MispError(f"type IOC non supporte par MISP: {ioc.type}")
+        event_id = self.ensure_event()
+        payload = self._request("POST", "/attributes/add", json_body={
+            "Event": {"id": event_id},
+            "Attribute": {
+                "type": attr_type,
+                "value": ioc.value,
+                "category": MISP_CATEGORY.get(ioc.type, "Other"),
+                "to_ids": True,
+                "distribution": "5",     # inherit event
+                "comment": comment or f"SOAR score={ioc.score}",
+            },
+        })
+        attr = payload.get("Attribute") or {}
+        attr_id = attr.get("id")
+        if not attr_id:
+            raise MispError(f"attribute MISP sans id: {str(payload)[:160]}")
+        return str(attr_id)
+
+    def get_attribute(self, attribute_id: str) -> Optional[dict]:
+        """Read-back verification: returns the attribute or None if absent."""
+        try:
+            payload = self._request("GET", f"/attributes/view/{attribute_id}")
+        except MispError as exc:
+            if "404" in str(exc) or "not found" in str(exc).lower():
+                return None
+            raise
+        attr = payload.get("Attribute")
+        return attr if isinstance(attr, dict) else None
+
+    def verify_attribute(self, attribute_id: str, expected_value: str) -> bool:
+        """True only if the attribute exists AND carries the expected value."""
+        attr = self.get_attribute(attribute_id)
+        if not attr:
+            return False
+        values = attr.get("value")
+        if isinstance(values, list):
+            return expected_value in values
+        return str(values) == expected_value
+
+    def delete_attribute(self, attribute_id: str) -> bool:
+        """Retract an attribute. Returns True when MISP confirms deletion."""
+        payload = self._request("DELETE", f"/attributes/delete/{attribute_id}")
+        message = str(payload.get("message", "")).lower()
+        return "deleted" in message or "removed" in message
+
+    def publish_event(self) -> bool:
+        """Publish the shared event so consumers can sync it."""
+        event_id = self.ensure_event()
+        payload = self._request("POST", f"/events/{event_id}/publish")
+        message = str(payload.get("message", "")).lower()
+        return "success" in message or "published" in message
