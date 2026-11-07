@@ -1,0 +1,47 @@
+{
+  "project": "SOAR IOC Factory",
+  "generated_by": "scripts/generate_n8n_workflows.py",
+  "api_base": "http://soar-api:8000/api/v1",
+  "workflows": [
+    {
+      "file": "01-ioc-collection.json",
+      "name": "1 - IOC Collection",
+      "description": "Collecte periodique depuis les sources de Threat Intelligence (sans cle API), normalisation et deduplication via l'API."
+    },
+    {
+      "file": "02-ioc-normalization.json",
+      "name": "2 - IOC Normalization",
+      "description": "Reconciliation de la normalisation et de la deduplication."
+    },
+    {
+      "file": "03-ioc-enrichment.json",
+      "name": "3 - IOC Enrichment",
+      "description": "Enrichissement des IOC NORMALIZED via AlienVault OTX (public, sans cle)."
+    },
+    {
+      "file": "04-ioc-scoring.json",
+      "name": "4 - IOC Scoring",
+      "description": "Calcul du score explicable et application des decisions automatiques."
+    },
+    {
+      "file": "05-ioc-publication.json",
+      "name": "5 - IOC Publication",
+      "description": "Publication des IOC a score eleve vers la liste de detection, avec verification."
+    },
+    {
+      "file": "06-ioc-monitoring.json",
+      "name": "6 - IOC Monitoring",
+      "description": "Surveillance des detections et des faux positifs."
+    },
+    {
+      "file": "07-ioc-expiration.json",
+      "name": "7 - IOC Expiration",
+      "description": "Expiration et retrait automatique des indicateurs obsolètes, avec verification."
+    },
+    {
+      "file": "08-ioc-reporting.json",
+      "name": "8 - IOC Reporting",
+      "description": "Generation quotidienne du rapport d'activite (statistiques reelles)."
+    }
+  ]
+}

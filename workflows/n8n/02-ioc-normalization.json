@@ -1,0 +1,150 @@
+{
+  "name": "2 - IOC Normalization",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "365eb365-a588-4ad9-a145-386fce9f6bfe",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -460,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://soar-api:8000/api/v1/iocs/normalize/run?limit=200",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "94b3089c-7a71-471d-80cd-5173f0f2f917",
+      "name": "Reconcile NEW records",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        40,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "content": "Workflow 2 — Normalisation + deduplication\nPasse de reconciliation pour les enregistrements\nbloques en NEW. Meme code que l'ingest:\nvalidation IP/domaine/URL/hash + empreinte.",
+        "height": 160,
+        "width": 340
+      },
+      "id": "b57c1d6a-84be-4d1a-a1b8-69d315890f82",
+      "name": "Doc",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "content": "Echec -> retry puis sortie d'erreur\ntracee dans audit_logs.",
+        "height": 160,
+        "width": 340
+      },
+      "id": "9ee1f61d-0b42-4708-8394-174bed2ed192",
+      "name": "On Error",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        260
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "2ef05710-e964-4275-ab4a-305c6a7d4189",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        180
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Reconcile NEW records",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Reconcile NEW records": {
+      "main": [
+        [],
+        [
+          {
+            "node": "On Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Doc": {},
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Reconcile NEW records",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "UTC",
+    "saveExecutionProgress": true
+  },
+  "active": false,
+  "meta": {
+    "instanceId": "soar-ioc-factory"
+  },
+  "tags": [
+    {
+      "name": "soar-ioc-factory"
+    }
+  ],
+  "pinData": {},
+  "_description": "Reconciliation de la normalisation et de la deduplication.",
+  "id": "jrbz74vokPzB9sNZ"
+}

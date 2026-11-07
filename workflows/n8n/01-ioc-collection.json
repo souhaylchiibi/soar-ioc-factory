@@ -1,0 +1,150 @@
+{
+  "name": "1 - IOC Collection",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "99cce6c0-95c5-458a-b4c9-8985435ae344",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -460,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://soar-api:8000/api/v1/iocs/collect/run?limit=50",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "3b71369a-8673-456e-872d-e176a77055d0",
+      "name": "Collect from sources",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        40,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "content": "Workflow 1 — Collecte periodique des IOC\nSources: Feodo Tracker, blocklist.de, urlscan.io\n(sans cle API) + gestion d'erreur isolee par source.",
+        "height": 160,
+        "width": 340
+      },
+      "id": "8f3eafbf-487f-4f74-8f25-12a42325e74b",
+      "name": "Doc",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "content": "Erreur API / source inaccessible :\nretry 3x puis sortie d'erreur.\nL'echec est journalise dans audit_logs\n(success=false) — jamais un succes simule.",
+        "height": 160,
+        "width": 340
+      },
+      "id": "d0d50149-c57d-47a3-9c35-4152127e4013",
+      "name": "On Error (collect)",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        260
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "0eddcbbf-c4ca-41eb-91be-7b84c319c441",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        180
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Collect from sources",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Collect from sources": {
+      "main": [
+        [],
+        [
+          {
+            "node": "On Error (collect)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Doc": {},
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Collect from sources",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "UTC",
+    "saveExecutionProgress": true
+  },
+  "active": false,
+  "meta": {
+    "instanceId": "soar-ioc-factory"
+  },
+  "tags": [
+    {
+      "name": "soar-ioc-factory"
+    }
+  ],
+  "pinData": {},
+  "_description": "Collecte periodique depuis les sources de Threat Intelligence (sans cle API), normalisation et deduplication via l'API.",
+  "id": "m2O4V96oGzkZaiJl"
+}

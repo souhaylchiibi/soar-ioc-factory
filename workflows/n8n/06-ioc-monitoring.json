@@ -1,0 +1,150 @@
+{
+  "name": "6 - IOC Monitoring",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "6c8c2172-7144-4e9e-a54f-462fffac878a",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -460,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://soar-api:8000/api/v1/iocs/detections/recent?limit=50",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "fd9c89c0-e515-4824-b51e-ec27fd2ef01b",
+      "name": "Fetch recent detections",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        40,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "content": "Workflow 6 — Observation des detections\nInterroge les evenements Wazuh/Suricata.\nCompte les correspondances et signale les\nfaux positifs (is_false_positive).",
+        "height": 160,
+        "width": 340
+      },
+      "id": "523c0d3b-bc6a-4342-a888-c152e2c9c3fb",
+      "name": "Doc",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "content": "Capteurs injoignables -> retry puis\nsortie d'erreur tracee.",
+        "height": 160,
+        "width": 340
+      },
+      "id": "7cb53b12-e175-4202-951b-0a019e1bdf35",
+      "name": "On Error",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        260
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "576ac952-b706-44bf-9fb1-9ba7f286d71a",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        180
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch recent detections",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Fetch recent detections": {
+      "main": [
+        [],
+        [
+          {
+            "node": "On Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Doc": {},
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch recent detections",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "UTC",
+    "saveExecutionProgress": true
+  },
+  "active": false,
+  "meta": {
+    "instanceId": "soar-ioc-factory"
+  },
+  "tags": [
+    {
+      "name": "soar-ioc-factory"
+    }
+  ],
+  "pinData": {},
+  "_description": "Surveillance des detections et des faux positifs.",
+  "id": "FxFcs5nNMkJeXKEf"
+}

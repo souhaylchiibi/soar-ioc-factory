@@ -110,7 +110,13 @@ class TestEnrichment:
     def test_mixed_verdicts_documented(self) -> None:
         result = compute_score(make_input(enrichment_verdicts=["malicious", "benign"]))
         component = next(c for c in result.components if c.key == "enrichment_agreement")
-        assert "mixed" in component.explanation
+        # Contradictory verdicts must be spelled out, not averaged silently.
+        assert "malicious" in component.explanation and "benign" in component.explanation
+
+    def test_single_provider_explanation(self) -> None:
+        result = compute_score(make_input(enrichment_verdicts=["malicious"]))
+        component = next(c for c in result.components if c.key == "enrichment_agreement")
+        assert "1 fournisseur" in component.explanation
 
 
 class TestFalsePositives:

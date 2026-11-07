@@ -142,14 +142,17 @@ def _independent_sources_score(count: int, maximum: int) -> float:
 def _enrichment_score(verdicts: list[str]) -> tuple[float, str]:
     """Consensus of enrichment verdicts -> 0..100 + explanation."""
     if not verdicts:
-        return 50.0, "no enrichment available — neutral contribution"
+        return 50.0, "aucun enrichissement disponible — contribution neutre"
     weights = {"malicious": 100, "suspicious": 65, "unknown": 40, "benign": 0}
     values = [weights.get(v, 40) for v in verdicts]
     agreement = sum(values) / len(values)
-    if len(set(verdicts)) == 1 and len(verdicts) > 1:
-        note = f"{len(verdicts)} providers agree on '{verdicts[0]}'"
+    distinct = set(verdicts)
+    if len(verdicts) == 1:
+        note = f"1 fournisseur: '{verdicts[0]}'"
+    elif len(distinct) == 1:
+        note = f"{len(verdicts)} fournisseurs s'accordent sur '{verdicts[0]}'"
     else:
-        note = f"mixed verdicts: {', '.join(verdicts)}"
+        note = f"verdicts partagés: {', '.join(verdicts)}"
     return float(agreement), note
 
 

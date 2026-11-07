@@ -1,0 +1,153 @@
+{
+  "name": "4 - IOC Scoring",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "937bf6d0-975d-47da-ad56-f3b83438a7eb",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -460,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://soar-api:8000/api/v1/iocs/scoring/run",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"ioc_ids\": [], \"only_status\": \"ENRICHED\"}"
+      },
+      "id": "64f3d0bc-68b4-40f3-92f0-9883691241b3",
+      "name": "Score ENRICHED IOCs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        40,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "content": "Workflow 4 — Scoring explicable\nChaque score est stocke avec son detail\n(score_breakdown) dans score_history.\nSeuils: >=80 publier / 50-79 surveiller /\n<50 rejeter.",
+        "height": 160,
+        "width": 340
+      },
+      "id": "dfd52434-adc0-4027-aec7-cadd23aa2066",
+      "name": "Doc",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "content": "Echec du scoring -> retry puis\nsortie d'erreur tracee.",
+        "height": 160,
+        "width": 340
+      },
+      "id": "265a463c-a4da-4fd3-98b2-b2a9b4e18d94",
+      "name": "On Error",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        260
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "42c73f77-2b30-4405-ab88-b5b9b3b922bc",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        180
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Score ENRICHED IOCs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Score ENRICHED IOCs": {
+      "main": [
+        [],
+        [
+          {
+            "node": "On Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Doc": {},
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Score ENRICHED IOCs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "UTC",
+    "saveExecutionProgress": true
+  },
+  "active": false,
+  "meta": {
+    "instanceId": "soar-ioc-factory"
+  },
+  "tags": [
+    {
+      "name": "soar-ioc-factory"
+    }
+  ],
+  "pinData": {},
+  "_description": "Calcul du score explicable et application des decisions automatiques.",
+  "id": "ZjwJnGnWxeQoO8PS"
+}

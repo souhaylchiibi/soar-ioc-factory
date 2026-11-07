@@ -1,0 +1,150 @@
+{
+  "name": "3 - IOC Enrichment",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "17402688-905b-4b76-a1c6-c9be7b11422e",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -460,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://soar-api:8000/api/v1/iocs/enrich/run?limit=50",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "d9be19c0-5bad-451f-a790-c5d9df16a354",
+      "name": "Enrich via OTX",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        40,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "content": "Workflow 3 — Enrichissement OTX\nGET /indicators/{type}/{value}/general\nSans cle API. Verdict derive des donnees\nreelles (pulse_count) — jamais invente.",
+        "height": 160,
+        "width": 340
+      },
+      "id": "a79c5891-68b5-4d17-97cc-3205de5ccbcf",
+      "name": "Doc",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "content": "Provider OTX inaccessible:\nretry 3x puis sortie d'erreur.\nUn provider en echec n'arrete jamais\nles autres (verdicts partages).",
+        "height": 160,
+        "width": 340
+      },
+      "id": "5d357d33-9bad-4739-8a93-8015cd6be288",
+      "name": "On Error",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        260
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "0e6b008f-8c5b-4c87-9f9d-b4313e3251ef",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        180
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Enrich via OTX",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Enrich via OTX": {
+      "main": [
+        [],
+        [
+          {
+            "node": "On Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Doc": {},
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Enrich via OTX",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "UTC",
+    "saveExecutionProgress": true
+  },
+  "active": false,
+  "meta": {
+    "instanceId": "soar-ioc-factory"
+  },
+  "tags": [
+    {
+      "name": "soar-ioc-factory"
+    }
+  ],
+  "pinData": {},
+  "_description": "Enrichissement des IOC NORMALIZED via AlienVault OTX (public, sans cle).",
+  "id": "QxkfSR8uABSHOrOZ"
+}

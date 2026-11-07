@@ -1,0 +1,150 @@
+{
+  "name": "5 - IOC Publication",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "7214a44f-daeb-431e-85f9-399be1fde382",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -460,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://soar-api:8000/api/v1/iocs/publish/run?limit=100",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "09124f41-3244-4e9c-9ed3-8645981c2290",
+      "name": "Publish to detection list",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        40,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "content": "Workflow 5 — Publication des IOC fiables\nCible actuelle: liste de detection locale.\nMISP arrive en Phase 5. Verification:\nrelecture apres ecriture (champ verified).",
+        "height": 160,
+        "width": 340
+      },
+      "id": "589f7766-d0f3-46b1-be1b-7af4c6f60770",
+      "name": "Doc",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "content": "Publication echouee -> retry puis\nsortie d'erreur. L'API ne marque\n'verified' qu'apres relecture de la\npublication (jamais de succes auto-declare).",
+        "height": 160,
+        "width": 340
+      },
+      "id": "a9bee8df-42af-4b42-8452-5e0bbfae8ccf",
+      "name": "On Error",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        280
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "ee806995-4b6d-47a7-968c-9a34b99e143f",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        180
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Publish to detection list",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Publish to detection list": {
+      "main": [
+        [],
+        [
+          {
+            "node": "On Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Doc": {},
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Publish to detection list",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "UTC",
+    "saveExecutionProgress": true
+  },
+  "active": false,
+  "meta": {
+    "instanceId": "soar-ioc-factory"
+  },
+  "tags": [
+    {
+      "name": "soar-ioc-factory"
+    }
+  ],
+  "pinData": {},
+  "_description": "Publication des IOC a score eleve vers la liste de detection, avec verification.",
+  "id": "LqNcTCKxsoZl7Nkt"
+}

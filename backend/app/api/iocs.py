@@ -198,7 +198,7 @@ def run_scoring(body: ScoringRunRequest, db: Session = Depends(get_db)) -> Scori
 
     resp = ScoringRunResponse()
     for ioc in targets:
-        report = score_and_decide(db, ioc, triggered_by="workflow-4")
+        report = score_and_decide(db, ioc, actor="workflow-4", triggered_by="workflow-4")
         if report.score is None:
             continue
         resp.scored += 1
