@@ -1,0 +1,181 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>SOAR IOC Factory â€” Integration SOC (Phase 5)</title>
+<style>
+  :root { --bg:#0b1220; --card:#131c2e; --line:#223049; --txt:#e6edf7; --mut:#8fa3bf;
+          --ok:#22c55e; --acc:#38bdf8; --err:#ef4444; --warn:#f59e0b; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--txt); font-family:"Segoe UI",system-ui,sans-serif; padding:34px; }
+  header { display:flex; align-items:center; gap:16px; border-bottom:2px solid var(--line); padding-bottom:18px; margin-bottom:24px; }
+  .logo { width:52px; height:52px; border-radius:12px; background:linear-gradient(135deg,#f97316,#eab308); display:grid; place-items:center; font-size:26px; }
+  h1 { font-size:25px; } h1 span { color:var(--acc); }
+  .sub { color:var(--mut); font-size:13px; margin-top:4px; }
+  .badge { margin-left:auto; background:#064e3b; color:#6ee7b7; border:1px solid #059669; padding:8px 16px; border-radius:999px; font-size:13.5px; font-weight:700; }
+  .grid { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:22px; }
+  .kpi { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:15px; }
+  .kpi .v { font-size:24px; font-weight:700; } .g { color:#22c55e; } .b { color:#38bdf8; } .r { color:#f87171; } .a { color:#fbbf24; } .p { color:#c084fc; }
+  .kpi .l { color:var(--mut); font-size:11.5px; margin-top:5px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; margin-bottom:20px; }
+  h2 { font-size:15px; color:var(--acc); margin-bottom:14px; text-transform:uppercase; letter-spacing:.7px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { text-align:left; color:var(--mut); font-weight:600; padding:8px 10px; border-bottom:1px solid var(--line); font-size:12px; }
+  td { padding:7px 10px; border-bottom:1px solid rgba(34,48,73,.55); word-break:break-all; }
+  tr:last-child td { border-bottom:none; }
+  .s { display:inline-block; padding:2px 9px; border-radius:6px; font-size:11.5px; font-weight:600; }
+  .ok { background:#052e16; color:#86efac; border:1px solid #166534; }
+  .warn { background:#2e2305; color:#fcd34d; border:1px solid #854d0e; }
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .cols3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+  code { background:#0b1220; border:1px solid var(--line); padding:1px 6px; border-radius:5px; color:#a5f3fc; font-size:11.5px; }
+  pre { background:#060b16; border:1px solid var(--line); border-radius:8px; padding:14px; font-family:Consolas,monospace; font-size:11.5px; white-space:pre-wrap; color:#cbd5e1; overflow:auto; }
+  .foot { color:var(--mut); font-size:12px; text-align:center; margin-top:24px; }
+  .flow { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px; }
+  .step { padding:7px 12px; border-radius:8px; font-size:12px; font-weight:700; background:#0a1a2e; color:#93c5fd; border:1px solid #1e40af; }
+  .ar { color:#64748b; font-size:16px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">&#128737;</div>
+  <div>
+    <h1>SOAR <span>IOC Factory</span> &mdash; Integration SOC &middot; PHASE 5</h1>
+    <div class="sub">Suricata 8.0.8 (alertes reelles) &middot; Wazuh 4.12.0 (regles 5710/5712) &middot; listes generees depuis les IOC publies</div>
+  </div>
+  <div class="badge">&#10004; DETECTIONS OBSERVEES DEUX CAPTEURS</div>
+</header>
+
+<div class="grid">
+  <div class="kpi"><div class="v b">2</div><div class="l">Capteurs actifs (Suricata + Wazuh)</div></div>
+  <div class="kpi"><div class="v g">206</div><div class="l">Alertes analysees</div></div>
+  <div class="kpi"><div class="v a">16</div><div class="l">Correspondances IOC suivies</div></div>
+  <div class="kpi"><div class="v p">3</div><div class="l">Sources de detection (suricata/wazuh/manual)</div></div>
+  <div class="kpi"><div class="v r">1,6 Go</div><div class="l">RAM totale (12,4 Go dispo)</div></div>
+</div>
+
+<div class="card">
+  <h2>1 &middot; Boucle complete detecte &rarr; inventaire</h2>
+  <div class="flow">
+    <span class="step">Liste generee (IOC PUBLISHED)</span><span class="ar">&rarr;</span>
+    <span class="step">Regles Suricata + Wazuh</span><span class="ar">&rarr;</span>
+    <span class="step">Trafic labo</span><span class="ar">&rarr;</span>
+    <span class="step">Alerte IDS reelle</span><span class="ar">&rarr;</span>
+    <span class="step">Inventaire local</span><span class="ar">&rarr;</span>
+    <span class="step">detection_count +1</span><span class="ar">&rarr;</span>
+    <span class="step">Re-score</span>
+  </div>
+  <p style="color:#8fa3bf;font-size:12.5px;">
+    Verification : Suricata a charge la regle generee et a feu sur le PCAP labo (<b>sid 925288, 1 alerte</b>) ;
+    Wazuh a declenche les regles <b>5710</b> (login utilisateur inexistant) et <b>5712</b> (brute force sshd)
+    sur le log de labo &mdash; <code>wazuh-logtest</code> confirme <code>srcip: 34.204.119.63</code>.
+    Alertes hors inventaire = rapportees, jamais ajoutees silencieusement.
+  </p>
+  <h2 style="margin-top:16px;">Regles Suricata generees automatiquement (fichier reel)</h2>
+  <pre><tr><td><code>alert ip $HOME_NET any -&gt; 34.204.119.63 any (msg:&quot;SOAR-IOC tracked IP 34.204.119.63&quot;; sid:925288; rev:1; classtype:targeted-activity;)</code></td></tr></pre>
+</div>
+
+<div class="cols">
+  <div class="card">
+    <h2>2 &middot; Detections par capteur (table detections)</h2>
+    <table>
+      <tr><th>Capteur</th><th>Nombre</th><th>Derniere observation</th></tr>
+      <tr><td><b>manual</b></td><td>10</td><td>2026-11-07 01:32:07</td></tr>
+<tr><td><b>suricata</b></td><td>2</td><td>2026-11-06 21:20:00</td></tr>
+<tr><td><b>wazuh</b></td><td>4</td><td>2026-11-07 07:23:54</td></tr>
+    </table>
+    <h2 style="margin-top:18px;">3 &middot; IOC avec observations</h2>
+    <table>
+      <tr><th>Valeur</th><th>Score</th><th>Risque</th><th>Statut</th><th>Det.</th><th>FP</th></tr>
+      <tr><td>34.204.119.63</td><td>82</td><td>CRITICAL</td><td>PUBLISHED</td><td><b>11</b></td><td>0</td></tr>
+<tr><td>162.243.103.246</td><td>82</td><td>CRITICAL</td><td>REMOVED</td><td><b>5</b></td><td>0</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h2>4 &middot; Inventaire global</h2>
+    <table>
+      <tr><th>Statut</th><th>Nombre</th></tr>
+      <tr><td>MONITORED</td><td><b>63</b></td></tr>
+<tr><td>ENRICHED</td><td><b>44</b></td></tr>
+<tr><td>NORMALIZED</td><td><b>25</b></td></tr>
+<tr><td>REMOVED</td><td><b>1</b></td></tr>
+<tr><td>PUBLISHED</td><td><b>1</b></td></tr>
+    </table>
+    <h2 style="margin-top:18px;">5 &middot; Effets workflows (audit_logs)</h2>
+    <table>
+      <tr><th>Workflow</th><th>Action</th><th>Occ.</th><th>Succes</th></tr>
+      <tr><td>workflow-1</td><td>COLLECT</td><td>6</td><td><span class='s ok'>6</span></td></tr>
+<tr><td>workflow-1</td><td>DEDUP</td><td>35</td><td><span class='s ok'>35</span></td></tr>
+<tr><td>workflow-1</td><td>NORMALIZE</td><td>135</td><td><span class='s ok'>134</span></td></tr>
+<tr><td>workflow-2</td><td>NORMALIZE</td><td>1</td><td><span class='s ok'>1</span></td></tr>
+<tr><td>workflow-3</td><td>ENRICH</td><td>2</td><td><span class='s ok'>2</span></td></tr>
+<tr><td>workflow-4</td><td>SCORE</td><td>2</td><td><span class='s ok'>2</span></td></tr>
+<tr><td>workflow-5</td><td>PUBLISH</td><td>2</td><td><span class='s ok'>2</span></td></tr>
+<tr><td>workflow-6</td><td>OBSERVE</td><td>14</td><td><span class='s ok'>14</span></td></tr>
+<tr><td>workflow-7</td><td>EXPIRE</td><td>1</td><td><span class='s ok'>1</span></td></tr>
+<tr><td>workflow-7</td><td>REMOVE</td><td>1</td><td><span class='s ok'>1</span></td></tr>
+<tr><td>workflow-8</td><td>EXPORT</td><td>1</td><td><span class='s ok'>1</span></td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="cols3">
+  <div class="card">
+    <h2>6 &middot; Suricata 8.0.8</h2>
+    <table>
+      <tr><th>Point</th><th>Valeur</th></tr>
+      <tr><td>Image</td><td><code>jasonish/suricata</code> (591 Mo)</td></tr>
+      <tr><td>Mode</td><td>IDS (alert) â€” aucun DROP</td></tr>
+      <tr><td>Regle chargee</td><td><span class="s ok">1 / 1, 0 echec</span></td></tr>
+      <tr><td>Alertes PCAP labo</td><td><span class="s ok">1 (sid 925288)</span></td></tr>
+      <tr><td>Sortie</td><td>eve.json / fast.log / stats.log</td></tr>
+      <tr><td>Profil</td><td><code>detection</code> (optionnel)</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h2>7 &middot; Wazuh 4.12.0</h2>
+    <table>
+      <tr><th>Point</th><th>Valeur</th></tr>
+      <tr><td>Image</td><td><code>wazuh/wazuh-manager</code> (2,07 Go)</td></tr>
+      <tr><td>Services</td><td><span class="s ok">logcollector + analysisd + remoted + db</span></td></tr>
+      <tr><td>Alertes totales</td><td>204 (dont SCA natif)</td></tr>
+      <tr><td>Regles IOC</td><td><span class="s ok">5710 + 5712</span></td></tr>
+      <tr><td>Verification</td><td><code>wazuh-logtest</code> : srcip confirm&#233;</td></tr>
+      <tr><td>Indexer</td><td><span class="s warn">absent (optionnel, ~2 Go &#233;conomis&#233;s)</span></td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h2>8 &middot; Consommation memoire</h2>
+    <table>
+      <tr><th>Conteneur</th><th>RAM</th></tr>
+      <tr><td>soar-api</td><td>76.25MiB / 512MiB</td></tr>
+<tr><td>soar-wazuh</td><td>1010MiB / 11.61GiB</td></tr>
+<tr><td>soar-n8n</td><td>675MiB / 1GiB</td></tr>
+<tr><td>soar-postgres</td><td>52.32MiB / 768MiB</td></tr>
+    </table>
+    <p style="color:#8fa3bf;font-size:12px;margin-top:10px;">
+      Budget total ma&#238;tris&#233; : ~1,6 Go utilis&#233;s sur 12,4 Go.<br>
+      Profils Docker : <code>detection</code> et <code>misp</code> restent optionnels.
+    </p>
+  </div>
+</div>
+
+<div class="card">
+  <h2>9 &middot; Incidents resolus pendant la phase</h2>
+  <table>
+    <tr><th>#</th><th>Probleme</th><th>Correction</th></tr>
+    <tr><td>1</td><td>Image officielle <code>misp/misp</code> refusee (priv&#233;e/supprim&#233;e)</td><td>Recherche Docker Hub : alternatives communaut&#233;s &#233;valu&#233;es ; MISP repouss&#233; avec profils (cf. documentation)</td></tr>
+    <tr><td>2</td><td><code>wazuh/wazuh-manager:latest</code> inexistant</td><td>Tag explicite <b>4.12.0</b> (verifi&#233; par manifest)</td></tr>
+    <tr><td>3</td><td>Crash en boucle : <code>Error 5009 Insecure user password</code></td><td>Mot de passe API conforme (8+, casse, chiffre, sp&#233;cial)</td></tr>
+    <tr><td>4</td><td><code>wazuh-db: Error reading XML</code> apr&#232;s &#233;dition</td><td><code>mktemp</code>+<code>mv</code> avait chang&#233; le propri&#233;taire &rarr; <b>root:wazuh</b> restaur&#233; (script idempotent)</td></tr>
+    <tr><td>5</td><td>&#201;l&#233;ment <code>&lt;priority&gt;</code> invalide dans <code>&lt;localfile&gt;</code></td><td>&#201;l&#233;ment retir&#233; (parseur Wazuh strict)</td></tr>
+    <tr><td>6</td><td>Fichier lab cr&#233;&#233; APR&#200;S le d&#233;marrage de logcollector</td><td>Red&#233;marrage + <code>wazuh-logtest</code> pour isoler la cause</td></tr>
+    <tr><td>7</td><td><code>alerts.json</code> en 640 : illisible pour l'API</td><td>Volume externe partag&#233; <b>en lecture seule</b> + script de permission r&#233;utilisable</td></tr>
+    <tr><td>8</td><td>Chemins relatifs r&#233;solus depuis la racine compose (pas le fichier override)</td><td><code>./integrations/...</code> (test&#233; par <code>compose config</code>)</td></tr>
+    <tr><td>9</td><td>Faux libell&#233;s dans une capture pr&#233;c&#233;dente (d&#233;tections/FP invers&#233;s)</td><td>D&#233;TECT&#233; et corrig&#233; puis re-captur&#233; â€” aucun chiffre faux laiss&#233;</td></tr>
+  </table>
+</div>
+
+<div class="foot">SOAR IOC Factory &middot; Projet 3 &mdash; Usine a indicateurs &middot; Phase 5 (Integration SOC) &middot; Suricata 8.0.8 / Wazuh 4.12.0 / PostgreSQL 16 / 116 tests</div>
+</body>
+</html>

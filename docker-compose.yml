@@ -14,6 +14,9 @@ networks:
 volumes:
   pgdata:
   n8n_data:
+  wazuh_alerts:
+    external: true          # created for the wazuh container (Phase 5)
+    name: soar_wazuh_alerts
 
 services:
   # ---------------- PostgreSQL (jamais exposé sur Internet) -------------
@@ -54,6 +57,13 @@ services:
     environment:
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
+    volumes:
+      # Read-only sensor outputs (Suricata eve.json / Wazuh alerts.json)
+      - ./integrations/suricata/output:/sensor/suricata:ro
+      - ./integrations/wazuh/output:/sensor/wazuh:ro
+      - ./integrations/suricata/rules:/sensor/rules:ro
+      # Wazuh alerts volume (external, shared with the wazuh container)
+      - wazuh_alerts:/sensor/wazuh_live:ro
     ports:
       - "127.0.0.1:8000:8000"
     networks: [soar-net]

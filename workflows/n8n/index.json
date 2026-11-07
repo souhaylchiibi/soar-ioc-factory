@@ -31,7 +31,7 @@
     {
       "file": "06-ioc-monitoring.json",
       "name": "6 - IOC Monitoring",
-      "description": "Surveillance des detections et des faux positifs."
+      "description": "Surveillance des detections (Suricata + Wazuh) et des faux positifs."
     },
     {
       "file": "07-ioc-expiration.json",

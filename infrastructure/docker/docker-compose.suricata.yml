@@ -1,0 +1,23 @@
+# Suricata — mode offline (rejeu PCAP labo) pour verifier les regles
+# Genere par docker compose. Profil: detection
+services:
+  suricata:
+    image: jasonish/suricata:latest
+    container_name: soar-suricata
+    profiles: [detection]
+    # Offline mode: reads the lab PCAP, applies soar-ioc.rules, writes eve.json
+    command: >
+      -r /pcap/lab-traffic.pcap
+      -S /rules/soar-ioc.rules
+      -l /log
+      -k none
+      -v
+    volumes:
+      # Relative paths resolve from the COMPOSE PROJECT DIRECTORY (docker-compose.yml).
+      - ./integrations/suricata/rules:/rules:ro
+      - ./integrations/suricata/testdata:/pcap:ro
+      - ./integrations/suricata/output:/log
+    networks: [soar-net]
+    deploy:
+      resources:
+        limits: { memory: 512M }

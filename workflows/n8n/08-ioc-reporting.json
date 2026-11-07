@@ -16,7 +16,7 @@
           ]
         }
       },
-      "id": "45e47f85-90ac-4ef8-9079-79256cb4e80c",
+      "id": "080a1a64-8cd2-4c77-a12c-c8f5122f4c9e",
       "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -40,7 +40,7 @@
           ]
         }
       },
-      "id": "daecdf58-35f4-455a-9325-7c3f988ff6ae",
+      "id": "7225f388-2e80-496e-ae58-1103ba73d2ac",
       "name": "Generate daily report",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -59,7 +59,7 @@
         "height": 160,
         "width": 340
       },
-      "id": "e40017e1-dc1e-4eef-90c1-51093d535c72",
+      "id": "6c3df557-c586-40bc-8318-f2d680b203dd",
       "name": "Doc",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -74,7 +74,7 @@
         "height": 160,
         "width": 340
       },
-      "id": "e83e8035-23d5-4b24-be91-e6e33abefa0d",
+      "id": "5626d224-9462-4195-a634-cdc03b386783",
       "name": "On Error",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -85,7 +85,7 @@
     },
     {
       "parameters": {},
-      "id": "104d589c-5bf7-477b-8c5f-6eb725ad7e96",
+      "id": "edcfb5a0-ff18-4a0d-97a3-a3ad0ed8ad75",
       "name": "Manual Trigger",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,

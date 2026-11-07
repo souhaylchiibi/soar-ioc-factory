@@ -12,7 +12,7 @@
           ]
         }
       },
-      "id": "99cce6c0-95c5-458a-b4c9-8985435ae344",
+      "id": "c3dba956-fe58-4fc4-99ca-c99f62734e78",
       "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -36,7 +36,7 @@
           ]
         }
       },
-      "id": "3b71369a-8673-456e-872d-e176a77055d0",
+      "id": "a277a6fe-b25c-4e09-875d-b9abe0e08ebb",
       "name": "Collect from sources",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -55,7 +55,7 @@
         "height": 160,
         "width": 340
       },
-      "id": "8f3eafbf-487f-4f74-8f25-12a42325e74b",
+      "id": "c9deee58-6633-4557-8576-b9c5786a26ba",
       "name": "Doc",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -70,7 +70,7 @@
         "height": 160,
         "width": 340
       },
-      "id": "d0d50149-c57d-47a3-9c35-4152127e4013",
+      "id": "b19912cf-905e-4a03-afb1-12cba5736d93",
       "name": "On Error (collect)",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -81,7 +81,7 @@
     },
     {
       "parameters": {},
-      "id": "0eddcbbf-c4ca-41eb-91be-7b84c319c441",
+      "id": "d86b1c15-863d-4bc1-b7e9-1c939a94a2fe",
       "name": "Manual Trigger",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,

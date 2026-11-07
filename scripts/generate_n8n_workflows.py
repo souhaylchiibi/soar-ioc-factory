@@ -201,17 +201,19 @@ def main() -> int:
         nodes, {**conn["connections"], "Doc": {}})))
 
     # ---------------- Workflow 6 : IOC Monitoring ------------------------
-    n6_err = note("On Error", "Capteurs injoignables -> retry puis\nsortie d'erreur tracee.", [-260, 260])
+    n6_err = note("On Error", "Capteurs injoignables -> retry puis\nsortie d'erreur tracee.\nFichier absent = 'no_file' honnete,\njamais un succes simule.", [-260, 300])
     nodes = [
         schedule(minutes=15),
+        http("Ingest Suricata alerts", "POST", f"{API}/iocs/detections/ingest?sensor=suricata"),
+        http("Ingest Wazuh alerts", "POST", f"{API}/iocs/detections/ingest?sensor=wazuh"),
         http("Fetch recent detections", "GET", f"{API}/iocs/detections/recent?limit=50"),
-        note("Doc", "Workflow 6 — Observation des detections\nInterroge les evenements Wazuh/Suricata.\nCompte les correspondances et signale les\nfaux positifs (is_false_positive).", [-260, -240]),
+        note("Doc", "Workflow 6 — Observation des detections\n1) lecture eve.json (Suricata) + alerts.json (Wazuh)\n2) correspondance avec l'inventaire local\n3) comptage (dedup par minute/regle)\nAlertes hors inventaire = rapportees, jamais\najoutees silencieusement.", [-260, -280]),
         n6_err,
     ]
-    conn = chain(nodes[0], nodes[1], error_note=n6_err)
+    conn = chain(nodes[0], nodes[1], nodes[2], nodes[3], error_note=n6_err)
     workflows.append(("06-ioc-monitoring", build(
         "6 - IOC Monitoring",
-        "Surveillance des detections et des faux positifs.",
+        "Surveillance des detections (Suricata + Wazuh) et des faux positifs.",
         nodes, {**conn["connections"], "Doc": {}})))
 
     # ---------------- Workflow 7 : IOC Expiration (2 etapes) -------------

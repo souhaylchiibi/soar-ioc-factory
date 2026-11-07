@@ -12,7 +12,7 @@
           ]
         }
       },
-      "id": "6c8c2172-7144-4e9e-a54f-462fffac878a",
+      "id": "08b5f7cb-bbd9-44d1-8f3c-5059270fa43c",
       "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -20,6 +20,62 @@
         -460,
         0
       ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://soar-api:8000/api/v1/iocs/detections/ingest?sensor=suricata",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "66103d33-c32b-4686-b38d-28590ad132f2",
+      "name": "Ingest Suricata alerts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        40,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://soar-api:8000/api/v1/iocs/detections/ingest?sensor=wazuh",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "e8c2c6f6-85cc-42b7-828e-4008b59e32f3",
+      "name": "Ingest Wazuh alerts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        40,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -36,7 +92,7 @@
           ]
         }
       },
-      "id": "fd9c89c0-e515-4824-b51e-ec27fd2ef01b",
+      "id": "3c49897d-7d69-4cb9-8aa2-0cb6955eb4da",
       "name": "Fetch recent detections",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -51,37 +107,37 @@
     },
     {
       "parameters": {
-        "content": "Workflow 6 — Observation des detections\nInterroge les evenements Wazuh/Suricata.\nCompte les correspondances et signale les\nfaux positifs (is_false_positive).",
+        "content": "Workflow 6 — Observation des detections\n1) lecture eve.json (Suricata) + alerts.json (Wazuh)\n2) correspondance avec l'inventaire local\n3) comptage (dedup par minute/regle)\nAlertes hors inventaire = rapportees, jamais\najoutees silencieusement.",
         "height": 160,
         "width": 340
       },
-      "id": "523c0d3b-bc6a-4342-a888-c152e2c9c3fb",
+      "id": "2ce9936d-ee3d-4837-9698-e0494d121829",
       "name": "Doc",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         -260,
-        -240
+        -280
       ]
     },
     {
       "parameters": {
-        "content": "Capteurs injoignables -> retry puis\nsortie d'erreur tracee.",
+        "content": "Capteurs injoignables -> retry puis\nsortie d'erreur tracee.\nFichier absent = 'no_file' honnete,\njamais un succes simule.",
         "height": 160,
         "width": 340
       },
-      "id": "7cb53b12-e175-4202-951b-0a019e1bdf35",
+      "id": "564c450e-3873-4a7a-8d06-4e80e70cf240",
       "name": "On Error",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         -260,
-        260
+        300
       ]
     },
     {
       "parameters": {},
-      "id": "576ac952-b706-44bf-9fb1-9ba7f286d71a",
+      "id": "aa230425-1cfd-4948-abef-6b59bf0bb94a",
       "name": "Manual Trigger",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
@@ -93,6 +149,30 @@
   ],
   "connections": {
     "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Ingest Suricata alerts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Ingest Suricata alerts": {
+      "main": [
+        [
+          {
+            "node": "Ingest Wazuh alerts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Ingest Wazuh alerts": {
       "main": [
         [
           {
@@ -121,7 +201,7 @@
       "main": [
         [
           {
-            "node": "Fetch recent detections",
+            "node": "Ingest Suricata alerts",
             "type": "main",
             "index": 0
           }
@@ -145,6 +225,6 @@
     }
   ],
   "pinData": {},
-  "_description": "Surveillance des detections et des faux positifs.",
+  "_description": "Surveillance des detections (Suricata + Wazuh) et des faux positifs.",
   "id": "FxFcs5nNMkJeXKEf"
 }

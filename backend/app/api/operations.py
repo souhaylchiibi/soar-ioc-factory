@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime, timezone
+from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -171,6 +172,87 @@ def normalize_run(
     db.commit()
     return {"found": len(stuck), "normalized": normalized, "rejected": rejected,
             "failed": failed, "remaining_new": int(remaining), "results": results}
+
+
+@router.post("/iocs/detections/ingest")
+def ingest_sensor_alerts(
+    db: Session = Depends(get_db),
+    sensor: str = Query(..., pattern="^(suricata|wazuh)$"),
+    path: Optional[str] = Query(None, description="Chemin du fichier eve.json/alerts.json"),
+) -> dict[str, Any]:
+    """Workflow 6: read IDS alerts and count matches against tracked IOCs.
+
+    Alerts whose indicator is NOT in the inventory are reported but never
+    stored as IOCs (collection owns ingestion — no silent insertion).
+    """
+    from app.integrations.suricata import parse_eve, trackable_value as s_val
+    from app.integrations.wazuh import parse_alerts_json
+    from app.models.ioc import Detection
+
+    default_paths = {
+        "suricata": "/sensor/suricata/eve.json",
+        # wazuh_live = volume externe partagé avec le conteneur wazuh
+        "wazuh": "/sensor/wazuh_live/alerts.json",
+    }
+    target = Path(path or default_paths[sensor])
+
+    if not target.exists():
+        return {"sensor": sensor, "status": "no_file",
+                "detail": f"{target} absent — capteur non actif (profil Docker?)",
+                "matched": 0, "untracked": 0, "alerts": 0}
+
+    if sensor == "suricata":
+        alerts = parse_eve(target)
+        candidates = [(a.timestamp, s_val(a), a.signature, str(a.sid), a.raw) for a in alerts]
+    else:
+        walerts = parse_alerts_json(target)
+        candidates = [(a.timestamp, a.src_ip, a.description, str(a.rule_id), {"full_log": a.full_log[:500]})
+                      for a in walerts]
+
+    matched = untracked = duplicates = 0
+    seen_keys: set[tuple] = set()
+    results = []
+    now = datetime.now(timezone.utc)
+
+    for ts, value, signature, rule_id, raw in candidates:
+        if not value:
+            continue
+        ioc = db.execute(select(Ioc).where(Ioc.value == value)).scalar_one_or_none()
+        if ioc is None:
+            untracked += 1
+            continue
+
+        # Dedup identical (ioc, sensor, rule, minute) alerts.
+        key = (ioc.id, sensor, rule_id, ts.replace(second=0, microsecond=0))
+        if key in seen_keys:
+            duplicates += 1
+            continue
+        seen_keys.add(key)
+
+        db.add(Detection(
+            ioc_id=ioc.id, sensor=sensor, rule_id=rule_id,
+            raw_event=raw if isinstance(raw, dict) else {"raw": str(raw)},
+            matched_at=ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc),
+        ))
+        ioc.detection_count += 1
+        ioc.last_detection_at = max(ioc.last_detection_at or ts, ts)
+        matched += 1
+        results.append({"ioc_id": str(ioc.id), "value": value,
+                        "signature": signature[:80], "rule_id": rule_id,
+                        "matched_at": ts.isoformat()})
+
+    db.add(AuditLog(
+        actor=f"workflow-6/{sensor}", action="OBSERVE", entity_type="batch",
+        detail={"alerts": len(candidates), "matched": matched,
+                "untracked": untracked, "duplicates_skipped": duplicates,
+                "file": str(target)},
+        success=True,
+        error=None if target.exists() else "file missing",
+    ))
+    db.commit()
+    return {"sensor": sensor, "status": "ok", "alerts": len(candidates),
+            "matched": matched, "untracked": untracked,
+            "duplicates_skipped": duplicates, "results": results[:50]}
 
 
 @router.get("/iocs/detections/recent")

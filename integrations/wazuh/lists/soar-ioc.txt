@@ -1,0 +1,2 @@
+# SOAR IOC detection list (PUBLISHED only)
+34.204.119.63

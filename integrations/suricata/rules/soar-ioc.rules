@@ -1,0 +1,4 @@
+# Genere par scripts/generate_detection_lists.py — NE PAS EDITER A LA MAIN
+# Source: IOC au statut PUBLISHED uniquement
+# Mode IDS (alert) — aucun blocage (aucune action inline/DROP en labo)
+alert ip $HOME_NET any -> 34.204.119.63 any (msg:"SOAR-IOC tracked IP 34.204.119.63"; sid:925288; rev:1; classtype:targeted-activity;)
