@@ -21,6 +21,8 @@ from docx.shared import Cm, Pt, RGBColor
 
 ROOT = Path(__file__).resolve().parents[1]
 CAPTURES = ROOT / "capture"
+EVAL_DIR = ROOT / "reports" / "evaluation"
+FIGURES = ROOT / "reports" / "figures"
 OUT = ROOT / "reports" / "RAPPORT_SOAR_IOC_FACTORY.docx"
 
 LOCAL_API = "http://127.0.0.1:8000/api/v1"
@@ -106,14 +108,13 @@ def table(headers: list[str], rows: list[list[str]], widths: list[float] | None 
 FIGURE_N = [0]
 
 
-def figure(filename: str, caption: str) -> None:
-    """Embed a screenshot from capture/ with a numbered caption."""
-    path = CAPTURES / filename
+def image(path: Path, caption: str, width_cm: float = 15.5) -> None:
+    """Embed an image with a numbered caption (screenshot or generated chart)."""
     if not path.exists():
-        doc.add_paragraph(f"[capture absente: {filename}]", italic=True)
+        doc.add_paragraph(f"[figure absente: {path.name}]", italic=True)
         return
     FIGURE_N[0] += 1
-    pic = doc.add_picture(str(path), width=Cm(15.5))
+    doc.add_picture(str(path), width=Cm(width_cm))
     doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
     cap = doc.add_paragraph()
     cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -122,6 +123,11 @@ def figure(filename: str, caption: str) -> None:
     run.font.size = Pt(9)
     run.font.color.rgb = RGBColor(0x55, 0x55, 0x55)
     doc.add_paragraph()
+
+
+def figure(filename: str, caption: str) -> None:
+    """Embed a screenshot from capture/."""
+    image(CAPTURES / filename, caption)
 
 
 # ------------------------------------------------------------ données ------
@@ -133,9 +139,33 @@ ec2 = api_get(EC2_API, "/iocs/stats/dashboard")
 commits = git_count()
 n_captures = len(list(CAPTURES.glob("*.jpg")))
 
+# Phase 7 evaluation: metrics produced by scripts/evaluate_platform.py.
+metrics: Optional[dict[str, Any]] = None
+if (EVAL_DIR / "metrics.json").exists():
+    try:
+        metrics = json.loads((EVAL_DIR / "metrics.json").read_text(encoding="utf-8"))
+    except Exception as exc:  # keep generating: the report says so explicitly
+        print(f"metrics.json illisible: {exc}")
+
 
 def fmt(value: Any, suffix: str = "") -> str:
     return "indisponible" if value is None else f"{value}{suffix}"
+
+
+def mval(section: str, key: str, default: Any = None) -> Any:
+    """Read one metric; never invent a value when the evaluation is missing."""
+    if not metrics:
+        return default
+    return metrics.get(section, {}).get(key, default)
+
+
+def num(value: Any) -> str:
+    """Drop a meaningless trailing .0 (52.0 -> 52) but keep real decimals."""
+    if value is None:
+        return "n/a"
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value)
 
 
 # ================================================================== TITRE ===
@@ -165,8 +195,8 @@ r = meta.add_run(
     "Candidat : Souhayl Chouaibi\n"
     "Plateforme SOAR de gestion automatisée des indicateurs de compromission\n"
     "Environnement : ThinkPad T480s (Windows 10 / WSL2) · AWS Academy Learner Lab\n"
-    "Date : 7 novembre 2026\n"
-    f"État : {commits} commits · 150 tests automatisés · {n_captures} captures d'écran"
+    "Date : 14 novembre 2026\n"
+    f"État : {commits} commits · 177 tests automatisés · {n_captures} captures d'écran"
 )
 r.font.size = Pt(11)
 
@@ -193,9 +223,9 @@ table(["Phase", "Intitulé", "État", "Preuve principale"], [
     ["4", "Automatisation n8n", "Terminée", "8 workflows JSON, 8/8 exécutions (Figure 5)"],
     ["5", "Intégration SOC", "Terminée", "Suricata + Wazuh réels, client MISP (Figure 6)"],
     ["6", "Frontend dashboard", "Terminée", "13 routes React/TS, build OK (Figures 7-13)"],
-    ["7", "Tests & évaluation", "Partielle", "150 tests + métriques live ; comparatif à finaliser"],
+    ["7", "Tests & évaluation", "Terminée", "177 tests dont 27 de sécurité + évaluation mesurée (Figures 15-21)"],
     ["8", "AWS", "Terminée", "EC2 déployé, 0 ressource créée (Figure 14)"],
-    ["9", "Documentation", "En cours", "audit, architecture, AWS livrés ; le reste en cours"],
+    ["9", "Documentation", "Terminée", "README + 5 guides (installation, workflows, sécurité, tests, usage)"],
 ])
 
 # ========================================================= 2. CONTEXTE ======
@@ -351,7 +381,14 @@ if local:
          f"{fmt(local['published_iocs'])} / {fmt(local['expired_iocs'])} / {fmt(local['removed_iocs'])}"],
         ["Score moyen", fmt(local["avg_score"], " /100")],
         ["Taux de déduplication", "—" if local["dedup_rate"] is None else f"{local['dedup_rate']*100:.1f} %"],
-        ["Temps moyen de traitement", fmt(local["avg_processing_seconds"], " s")],
+        ["Latence à chaud (ingestion → score)",
+         f"{mval('performance', 'hot_latency_avg_s')} s sur "
+         f"{mval('performance', 'hot_latency_iocs')} IOC" if metrics
+         else fmt(local["avg_processing_seconds"], " s")],
+        ["Backlog repris après arrêt (exclu)",
+         f"{mval('performance', 'backlog_iocs')} IOC · "
+         f"{mval('performance', 'backlog_latency_avg_h')} h en moyenne"
+         if metrics and mval("performance", "backlog_iocs") else "aucun"],
         ["Détections observées / faux positifs",
          f"{fmt(local['total_detections'])} / {fmt(local['false_positives'])}"],
         ["IOC synthétiques marqués (lab)", fmt(local["synthetic_iocs"])],
@@ -377,18 +414,152 @@ else:
     para("API EC2 (tunnel) indisponible au moment de la génération — instance peut-être arrêtée.",
          italic=True)
 
-# ================================================== 11. TESTS =============
-h1("11. Tests automatisés — 150 tests, 8 modules")
+# ========================================= 11. EVALUATION (PHASE 7) =======
+h1("11. Phase 7 — Évaluation de l'usine à indicateurs")
+para(
+    "Toutes les valeurs de cette section sont lues dans la base PostgreSQL réelle par "
+    "scripts/evaluate_platform.py (sortie : reports/evaluation/metrics.json). Le document "
+    "distingue trois natures de chiffres : les mesures (lues en base), l'hypothèse de comparaison "
+    "(le modèle manuel, explicite et modifiable) et ce qui n'a pas pu être mesuré."
+)
+
+if not metrics:
+    para(
+        "reports/evaluation/metrics.json est absent : exécuter d'abord "
+        "scripts/evaluate_platform.py, puis régénérer ce rapport.", italic=True,
+    )
+else:
+    def kv(values: dict[str, Any]) -> str:
+        if not values:
+            return "aucun"
+        return " · ".join(f"{k} {v}" for k, v in sorted(values.items(), key=lambda x: -x[1]))
+
+    inv = metrics["inventory"]
+    ded = metrics["dedup"]
+    enr = metrics["enrichment"]
+    sco = metrics["scoring"]
+    pub = metrics["publication"]
+    det = metrics["detection"]
+    lif = metrics["lifecycle"]
+    perf = metrics["performance"]
+    aut = metrics["automation"]
+
+    h2("11.1 Inventaire et qualité de la donnée")
+    table(["Mesure (base réelle)", "Valeur"], [
+        ["Indicateurs en base", f"{inv['total_iocs']}"],
+        ["Répartition par type", kv(inv["by_type"])],
+        ["Niveaux de risque", kv(inv["by_risk"])],
+        ["Indicateurs synthétiques (is_synthetic)", f"{inv['synthetic_iocs']}"],
+        ["Éléments bruts collectés / créés / mis à jour",
+         f"{ded['raw_items_collected']} / {ded['created']} / {ded['updated']}"],
+        ["Valeurs invalides rejetées", f"{ded['invalid_rejected']}"],
+        ["Doublons écartés (événements DEDUP)", f"{ded['dedup_events']}"],
+        ["Taux de déduplication (DEDUP / NORMALIZE + DEDUP)", f"{ded['dedup_rate_pct']} %"],
+    ])
+
+    h2("11.2 Enrichissement et notation")
+    table(["Mesure (base réelle)", "Valeur"], [
+        ["Indicateurs enrichis", f"{enr['iocs_enriched']} / {inv['total_iocs']} ({enr['coverage_pct']} %)"],
+        ["Résultats d'enrichissement stockés", f"{enr['results']} ({kv(enr['by_provider'])})"],
+        ["Succès / erreurs fournisseurs", f"{enr['provider_success_pct']} % / {enr['provider_errors']} erreurs"],
+        ["Indicateurs notés", f"{sco['scored_iocs']} ({num(sco['coverage_pct'])} %)"],
+        ["Score moyen / médian / p95", f"{num(sco['avg'])} / {num(sco['median'])} / {num(sco['p95'])}"],
+        ["Score minimum / maximum", f"{num(sco['min'])} / {num(sco['max'])}"],
+        ["Scores expliqués (score_breakdown persisté)",
+         f"{sco['explainable_iocs']} ({num(sco['explainability_pct'])} %)"],
+        ["Décisions : publier / surveiller / rejeter",
+         f"{sco['decisions']['publish']} / {sco['decisions']['monitor']} / {sco['decisions']['reject']}"],
+    ])
+
+    h2("11.3 Publication, détection et cycle de vie")
+    pub_rows = [
+        ["Publications enregistrées", f"{pub['total']}"],
+        ["Publications vérifiées par relecture", f"{pub['verified']}"],
+        ["Publications révoquées", f"{pub['revoked']}"],
+        ["Détections rapprochées", f"{det['total']} sur {det['iocs_with_detections']} indicateur(s)"],
+        ["Faux positifs observés", f"{det['false_positives']} ({det['false_positive_rate_pct']} %)"],
+        ["Transitions de cycle de vie journalisées", f"{lif['transitions_total']}"],
+    ]
+    if lif["full_cycles"]:
+        cyc = lif["full_cycles"][0]
+        pub_rows.append([
+            "Cycle complet mesuré (NEW → REMOVED)",
+            f"{num(cyc['seconds'])} s ({round(cyc['seconds'] / 60, 1)} min), {cyc['transitions']} transitions",
+        ])
+    table(["Mesure (base réelle)", "Valeur"], pub_rows)
+
+    h2("11.4 Performance mesurée")
+    table(["Mesure", "Valeur"], [
+        ["Traitement à chaud (ingestion → score)",
+         f"{perf['hot_latency_avg_s']} s en moyenne sur {perf['hot_latency_iocs']} indicateurs"],
+        ["Débit du lot à chaud",
+         f"{num(perf.get('hot_batch_throughput_ioc_per_s'))} indicateurs/s"],
+        ["Backlog repris après arrêt volontaire",
+         f"{perf['backlog_iocs']} indicateurs, {num(perf['backlog_latency_avg_h'])} h en moyenne "
+         f"(mesure d'indisponibilité, exclue de la latence à chaud)"],
+        ["Moteur de notation (CPU pur, sans base ni réseau)",
+         f"{num(perf['scoring_engine'].get('scores_per_second'))} scores/s "
+         f"({num(perf['scoring_engine'].get('us_per_score'))} µs/score)"],
+    ])
+
+    h2("11.5 Automatisation : hypothèse manuelle vs plateforme mesurée")
+    table(["Comparaison", "Valeur"], [
+        ["Modèle manuel par indicateur (HYPOTHÈSE, non mesurée)",
+         f"{num(aut['manual_minutes_per_ioc'])} min"],
+        ["Plateforme par indicateur (MESURÉE)", f"{num(aut['automated_minutes_per_ioc'])} min"],
+        ["Facteur de réduction", f"×{num(aut['time_reduction_factor'])}"],
+        ["Charge manuelle pour cet inventaire (hypothèse)",
+         f"{num(aut['manual_hours_for_inventory'])} h"],
+        ["Charge automatisée pour cet inventaire", f"{num(aut['automated_hours_for_inventory'])} h"],
+        ["Temps économisé (hypothèse)", f"{num(aut['hours_saved_for_inventory'])} h"],
+    ])
+    para(
+        "Le modèle manuel (17 min/IOC : collecte et vérification 1, normalisation 2, recherche "
+        "de doublons 2, enrichissement 4, notation 3, publication 4, journalisation 1) est une "
+        "hypothèse de comparaison posée explicitement dans scripts/evaluate_platform.py — ce n'est "
+        "pas une mesure du passé. Les temps de la plateforme, eux, sont mesurés en base. "
+        "Modifier une valeur du modèle et relancer le script met le rapport à jour."
+        , italic=True,
+    )
+
+    h2("11.6 Figures de l'évaluation")
+    for filename, caption in [
+        ("eval_01_cycle_de_vie.png", "Répartition des 174 indicateurs par étape du cycle de vie"),
+        ("eval_02_scores.png", "Distribution des scores et seuils de décision (rejet < 50, surveillance 50-79, publication ≥ 80)"),
+        ("eval_03_entonnoir.png", "Entonnoir du cycle de vie : transitions réellement observées"),
+        ("eval_04_enrichissement.png", "Verdicts d'enrichissement par fournisseur (OTX, AbuseIPDB)"),
+        ("eval_05_collecte_dedup.png", "Volume collecté et qualité : créations, mises à jour, doublons, rejets"),
+        ("eval_06_automatisation.png", "Temps de traitement par indicateur : modèle manuel (hypothèse) vs plateforme (mesurée)"),
+        ("eval_07_sources.png", "Contribution de chaque source de threat intelligence à l'inventaire"),
+    ]:
+        image(FIGURES / filename, caption, width_cm=15.0)
+
+    h2("11.7 Limites de l'évaluation")
+    bullets([
+        "Précision et rappel ne sont pas revendiqués : ils exigeraient un jeu de vérité terrain annoté. "
+        "Les indicateurs venant de flux publics, seuls des proxys réellement mesurables sont présentés "
+        "(taux de publication, couverture d'enrichissement, faux positifs observés).",
+        "Les faux positifs ne sont comptés que pour les détections revues ; une détection non revue "
+        "reste NULL et n'est jamais comptée comme bénigne.",
+        "Le backlog (indicateurs traités après un arrêt volontaire de la plateforme) gonfle la latence "
+        "globale : il est isolé dans les métriques au lieu d'être moyenné avec le régime nominal.",
+        "Les collecteurs abuse.ch (URLhaus, ThreatFox, MalwareBazaar) sont inactifs : la clé fournie a "
+        "été refusée par le serveur (unknown_auth_key). Aucune donnée n'a été simulée pour compenser.",
+    ])
+
+# ================================================== 12. TESTS =============
+h1("12. Tests automatisés — 177 tests, 9 modules")
 table(["Module", "Tests", "Couverture"], [
     ["test_normalization.py", "35", "IP/domaines/URL/hashes, rejets, empreintes (anti-doublon canonique)"],
+    ["test_security.py", "27", "Audit immuable (trigger), entrées hostiles, sauts d'état, anti-collusion, secrets, ports"],
     ["test_lifecycle.py", "23", "Transitions légales/illégales, états terminaux, bornes de risque"],
-    ["test_misp.py", "18", "Client MISP mocké, vérification par relecture, révocation refusée si non confirmée"],
-    ["test_scoring.py", "19", "Explicabilité, décroissance temporelle, anti-collusion, décisions"],
     ["test_ingest.py", "21", "Pipeline réel PostgreSQL : dédup, rejets, audit, provenance"],
+    ["test_scoring.py", "19", "Explicabilité, décroissance temporelle, anti-collusion, décisions"],
+    ["test_misp.py", "18", "Client MISP mocké, vérification par relecture, révocation refusée si non confirmée"],
     ["test_providers.py", "16", "OTX + AbuseIPDB hors-ligne (transport mocké), skip non applicable"],
     ["test_pipeline.py", "11", "Chemin complet ingestion → décision, expiration, résilience"],
     ["test_health.py", "7", "Healthchecks, configuration, logs JSON"],
-    ["TOTAL", "150", "Exécution : pytest,0 échec"],
+    ["TOTAL", "177", "pytest : 177 passed, 0 échec (~42 s, PostgreSQL 16 réel)"],
 ])
 para(
     "Bugs réellement détectés puis corrigés par ces tests (exemples) : composante de score "
@@ -397,8 +568,8 @@ para(
     "absent de la migration."
 )
 
-# ================================================== 12. SECURITE ==========
-h1("12. Sécurité")
+# ================================================== 13. SECURITE ==========
+h1("13. Sécurité")
 bullets([
     "Secrets : .env (clés API) et *.pem exclus du Git (vérifié par git check-ignore à chaque commit).",
     "Journal d'audit strictement append-only : trigger PostgreSQL forbid_audit_mutation (UPDATE/DELETE refusés), testé.",
@@ -410,14 +581,9 @@ bullets([
     "Aucune action de blocage réseau réel : intégrations en mode lecture/observation (Suricata IDS alert uniquement).",
 ])
 
-# ============================================ 13. LIMITES ================
-h1("13. Limites et travaux restants")
+# ============================================ 14. LIMITES ================
+h1("14. Limites et travaux restants")
 table(["Sujet", "État", "Suite prévue"], [
-    ["Phase 7 — rapport comparatif avant/après automatisation",
-     "Partiel", "Script de métriques + graphiques de résultats"],
-    ["Phase 9 — documentation",
-     "Partiel (audit, architecture, AWS livrés)",
-     "README, INSTALLATION, WORKFLOWS, SECURITY, TESTING, USER_GUIDE"],
     ["MISP serveur (option A : build officiel)",
      "Client livré (option B), serveur non déployé",
      "Build MISP/misp-docker ou instance fournie"],
@@ -426,13 +592,15 @@ table(["Sujet", "État", "Suite prévue"], [
     ["Wazuh indexer/dashboard",
      "Non déployé (économie ≈ 2 Go)", "Optionnel, profil dedicé"],
     ["Instance EC2",
-     "En cours d'exécution (crédits consommés)", "Arrêt en fin de session (procédure documentée)"],
+     "Arrêtée hors session (coût maîtrisé)", "Redémarrage documenté (docs/AWS_DEPLOYMENT.md)"],
     ["Durcissement SSH (SG /32)",
      "Non appliqué (validation requise)", "Basculer sur le SG default (IP unique)"],
+    ["Authentification de l'API",
+     "Absente (laboratoire mono-utilisateur, 127.0.0.1)", "OAuth2/JWT avant tout usage multi-utilisateur"],
 ])
 
-# ================================================ 14. ANNEXES =============
-h1("14. Annexes")
+# ================================================ 15. ANNEXES =============
+h1("15. Annexes")
 h2("Annexe A — Structure du dépôt")
 para(
     "backend/ (API, moteur IOC, collecteurs, enrichissement, scoring, cycle de vie, "
@@ -442,15 +610,18 @@ para(
 )
 h2("Annexe B — Commandes clés")
 para(
-    "Local : docker compose up -d --build · pytest · npm run dev\n"
+    "Local : docker compose up -d --build · pytest tests -q · npm run dev\n"
     "AWS   : ssh -i soar-ioc-key.pem -N -L 8091:127.0.0.1:80 ubuntu@<IP>\n"
-    "Migrations : alembic upgrade head · Workflows : n8n import:workflow <fichier>",
+    "Migrations : alembic upgrade head · Workflows : n8n import:workflow <fichier>\n"
+    "Livrables : python scripts/evaluate_platform.py puis python scripts/generate_report.py",
     size=9.5,
 )
-h2("Annexe C — Captures d'écran intégrées")
+h2("Annexe C — Captures d'écran et figures")
 para(
-    f"{n_captures} captures (01 à 11) sont intégrées en figures dans ce document "
-    f"et conservées dans capture/ ({commits} commits Git).", size=9.5,
+    f"{n_captures} captures (01 à 11) sont intégrées en figures dans ce document et conservées "
+    f"dans capture/. Les 7 figures de l'évaluation Phase 7 (reports/figures/) sont générées "
+    f"automatiquement depuis la base par scripts/evaluate_platform.py — aucune image n'est "
+    f"retouchée à la main ({commits} commits Git).", size=9.5,
 )
 
 OUT.parent.mkdir(parents=True, exist_ok=True)

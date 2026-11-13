@@ -58,8 +58,10 @@ def normalize_ip(raw: str) -> str:
         addr = ipaddress.ip_address(candidate)
     except ValueError as exc:
         raise NormalizationError(f"invalid IP address: {raw!r}") from exc
-    # 0.0.0.0 / :: and multicast are not threat indicators worth storing.
-    if addr.is_unspecified or addr.is_multicast:
+    # Non-routable noise (0.0.0.0, ::1, link-local, multicast) is not a threat
+    # indicator worth storing. NOTE: private ranges are kept on purpose --
+    # internal incident response feeds legitimately reference RFC1918 hosts.
+    if addr.is_unspecified or addr.is_multicast or addr.is_loopback or addr.is_link_local:
         raise NormalizationError(f"non-routable or multicast IP rejected: {raw!r}")
     return str(addr)
 

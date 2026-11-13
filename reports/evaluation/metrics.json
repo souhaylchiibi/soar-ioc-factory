@@ -1,0 +1,348 @@
+{
+  "generated_at": "2026-11-13T23:36:04.398738+00:00",
+  "database": "soar_ioc",
+  "inventory": {
+    "total_iocs": 174,
+    "by_status": {
+      "PUBLISHED": 1,
+      "MONITORED": 89,
+      "REMOVED": 1,
+      "REJECTED": 83
+    },
+    "by_type": {
+      "IP": 56,
+      "DOMAIN": 93,
+      "URL": 1,
+      "HASH_MD5": 8,
+      "HASH_SHA1": 5,
+      "HASH_SHA256": 11
+    },
+    "by_risk": {
+      "CRITICAL": 2,
+      "HIGH": 2,
+      "MEDIUM": 87,
+      "LOW": 83
+    },
+    "synthetic_iocs": 0,
+    "with_duplicate_of": 0,
+    "with_expiry": 1
+  },
+  "dedup": {
+    "raw_items_collected": 210,
+    "created": 174,
+    "updated": 35,
+    "duplicates_dropped_at_ingest": 0,
+    "invalid_rejected": 1,
+    "dedup_events": 35,
+    "normalize_events": 176,
+    "dedup_rate_pct": 16.6,
+    "duplicate_rate_of_inventory_pct": 0.0
+  },
+  "enrichment": {
+    "results": 149,
+    "iocs_enriched": 139,
+    "coverage_pct": 79.9,
+    "provider_errors": 12,
+    "provider_success_pct": 91.9,
+    "avg_results_per_enriched_ioc": 1.07,
+    "by_provider": {
+      "otx": 140,
+      "abuseipdb": 9
+    },
+    "by_verdict": {
+      "abuseipdb/unknown": 5,
+      "abuseipdb/benign": 1,
+      "otx/suspicious": 14,
+      "otx/malicious": 27,
+      "otx/unknown": 99,
+      "abuseipdb/suspicious": 3
+    }
+  },
+  "scoring": {
+    "scored_iocs": 174,
+    "coverage_pct": 100.0,
+    "avg": 51.9,
+    "median": 52.0,
+    "p95": 64.0,
+    "min": 37.0,
+    "max": 82.0,
+    "distribution": {
+      "0-49 (rejet)": 83,
+      "50-64 (surveillance)": 87,
+      "65-79 (surveillance)": 2,
+      "80-89 (publication)": 2,
+      "90-100 (publication)": 0
+    },
+    "decisions": {
+      "publish": 1,
+      "monitor": 89,
+      "reject": 83
+    },
+    "decisions_pct": {
+      "publish": 0.6,
+      "monitor": 51.1,
+      "reject": 47.7
+    },
+    "explainable_iocs": 174,
+    "explainability_pct": 100.0,
+    "components_avg": [
+      {
+        "key": "enrichment_agreement",
+        "label": "Consensus d'enrichissement",
+        "avg_points": 10.67,
+        "max_points": 20.0,
+        "avg_pct_of_max": 53.4
+      },
+      {
+        "key": "freshness",
+        "label": "Fraîcheur",
+        "avg_points": 15.03,
+        "max_points": 20.0,
+        "avg_pct_of_max": 75.1
+      },
+      {
+        "key": "independent_sources",
+        "label": "Sources indépendantes",
+        "avg_points": 8.61,
+        "max_points": 20.0,
+        "avg_pct_of_max": 43.0
+      },
+      {
+        "key": "observed_detections",
+        "label": "Détections observées",
+        "avg_points": 0.17,
+        "max_points": 15.0,
+        "avg_pct_of_max": 1.1
+      },
+      {
+        "key": "source_reliability",
+        "label": "Fiabilité de la source",
+        "avg_points": 17.39,
+        "max_points": 25.0,
+        "avg_pct_of_max": 69.6
+      }
+    ],
+    "policy": "v1"
+  },
+  "publication": {
+    "total": 2,
+    "verified": 1,
+    "revoked": 1,
+    "active": 1,
+    "by_target_status": [
+      {
+        "target": "detection_list",
+        "status": "revoked",
+        "count": 1
+      },
+      {
+        "target": "detection_list",
+        "status": "verified",
+        "count": 1
+      }
+    ],
+    "published_iocs": 1
+  },
+  "detection": {
+    "total": 16,
+    "iocs_with_detections": 2,
+    "coverage_pct": 1.1,
+    "false_positives": 0,
+    "false_positive_rate_pct": 0.0,
+    "by_sensor": {
+      "manual": 10,
+      "wazuh": 4,
+      "suricata": 2
+    }
+  },
+  "lifecycle": {
+    "transitions_total": 700,
+    "by_target_status": {
+      "PUBLISHED": 2,
+      "ENRICHED": 174,
+      "MONITORED": 91,
+      "REMOVED": 1,
+      "NORMALIZED": 174,
+      "REJECTED": 83,
+      "EXPIRED": 1,
+      "SCORED": 174
+    },
+    "stages": [
+      {
+        "stage": "NORMALIZED",
+        "observed": 174,
+        "avg_seconds_all": 0.0,
+        "avg_seconds_hot": 0.0,
+        "max_seconds": 0.0
+      },
+      {
+        "stage": "ENRICHED",
+        "observed": 174,
+        "avg_seconds_all": 161832.74,
+        "avg_seconds_hot": 99.0,
+        "max_seconds": 597904.44
+      },
+      {
+        "stage": "SCORED",
+        "observed": 174,
+        "avg_seconds_all": 207220.89,
+        "avg_seconds_hot": 34.61,
+        "max_seconds": 597737.8
+      },
+      {
+        "stage": "MONITORED",
+        "observed": 91,
+        "avg_seconds_all": 6603.45,
+        "avg_seconds_hot": 35.29,
+        "max_seconds": 597737.8
+      },
+      {
+        "stage": "REJECTED",
+        "observed": 83,
+        "avg_seconds_all": 427174.96,
+        "avg_seconds_hot": 31.98,
+        "max_seconds": 597737.8
+      },
+      {
+        "stage": "PUBLISHED",
+        "observed": 2,
+        "avg_seconds_all": 2492.87,
+        "avg_seconds_hot": 2492.87,
+        "max_seconds": 3016.63
+      },
+      {
+        "stage": "EXPIRED",
+        "observed": 1,
+        "avg_seconds_all": 37.66,
+        "avg_seconds_hot": 37.66,
+        "max_seconds": 37.66
+      },
+      {
+        "stage": "REMOVED",
+        "observed": 1,
+        "avg_seconds_all": 0.21,
+        "avg_seconds_hot": 0.21,
+        "max_seconds": 0.21
+      }
+    ],
+    "full_cycles": [
+      {
+        "value": "162.243.103.246",
+        "seconds": 2050.8,
+        "transitions": 7
+      }
+    ],
+    "expired": 0,
+    "removed": 1
+  },
+  "performance": {
+    "iocs_with_latency": 174,
+    "hot_latency_iocs": 65,
+    "hot_latency_avg_s": 43.8,
+    "hot_latency_max_s": 43.8,
+    "backlog_iocs": 109,
+    "backlog_latency_avg_h": 163.6,
+    "backlog_note": "Les indicateurs 'backlog' ont ete notations apres un arret volontaire de la plateforme (07/11 -> 14/11) : ce delai mesure l'indisponibilite, pas la performance.",
+    "hot_batch_throughput_ioc_per_s": 1.48,
+    "hot_batch_iocs": 65,
+    "scoring_engine": {
+      "iterations": 5000,
+      "total_ms": 184.1,
+      "us_per_score": 36.8,
+      "scores_per_second": 27159.0
+    }
+  },
+  "audit": {
+    "events": 422,
+    "failed": 2,
+    "by_action": {
+      "SCORE": 176,
+      "NORMALIZE": 176,
+      "DEDUP": 35,
+      "OBSERVE": 14,
+      "COLLECT": 8,
+      "ENRICH": 5,
+      "PUBLISH": 3,
+      "EXPORT": 2,
+      "CONFIG_CHANGE": 1,
+      "REMOVE": 1,
+      "EXPIRE": 1
+    }
+  },
+  "sources": [
+    {
+      "name": "urlscan",
+      "kind": "OPEN_SOURCE",
+      "enabled": true,
+      "reliability": 70,
+      "ioc_count": 79
+    },
+    {
+      "name": "blocklist_de",
+      "kind": "COMMUNITY",
+      "enabled": true,
+      "reliability": 60,
+      "ioc_count": 50
+    },
+    {
+      "name": "alienvault_otx",
+      "kind": "OPEN_SOURCE",
+      "enabled": true,
+      "reliability": 80,
+      "ioc_count": 40
+    },
+    {
+      "name": "feodotracker",
+      "kind": "COMMUNITY",
+      "enabled": true,
+      "reliability": 75,
+      "ioc_count": 5
+    },
+    {
+      "name": "synthetic_lab",
+      "kind": "SYNTHETIC",
+      "enabled": true,
+      "reliability": 50,
+      "ioc_count": 0
+    },
+    {
+      "name": "urlhaus",
+      "kind": "COMMUNITY",
+      "enabled": true,
+      "reliability": 70,
+      "ioc_count": 0
+    }
+  ],
+  "automation": {
+    "manual_baseline": {
+      "label": "Modele de reference manuel (HYPOTHESE, non mesure)",
+      "unit_minutes_per_ioc": {
+        "collecte_et_verification_source": 1.0,
+        "normalisation_et_validation": 2.0,
+        "recherche_de_doublons": 2.0,
+        "enrichissement_2_sources": 4.0,
+        "notation_et_decision": 3.0,
+        "publication_et_verification": 4.0,
+        "journalisation_et_tracabilite": 1.0
+      },
+      "note": "Temps unitaires par indicateur pour un analyste SOC sans automatisation. Modele explicite servant de point de comparaison : ce n'est PAS une mesure du passe. Les chiffres automatises, eux, viennent tous de la base."
+    },
+    "manual_minutes_per_ioc": 17.0,
+    "automated_minutes_per_ioc": 0.73,
+    "time_reduction_factor": 23.3,
+    "manual_hours_for_inventory": 49.3,
+    "automated_hours_for_inventory": 2.12,
+    "hours_saved_for_inventory": 47.2,
+    "steps_automated": [
+      "collecte multi-sources (4 collecteurs actifs)",
+      "normalisation + validation + dedup par empreinte",
+      "enrichissement OTX / AbuseIPDB avec cache 24 h",
+      "notation explicable 5 composantes + anti-collusion",
+      "decision automatique (publier / surveiller / rejeter)",
+      "publication verifiee par relecture",
+      "expiration puis retrait verifie",
+      "journal d'audit append-only"
+    ]
+  },
+  "notes": []
+}
