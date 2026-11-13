@@ -33,7 +33,7 @@ iptables DOCKER : -A DOCKER -d 127.0.0.1/32 --dport 80 -j DNAT ...  (ne matche Q
 Self-test EC2 → son IP publique:80 = TIMEOUT (SG filtre)
 ```
 
-Règles security group en place (**aucune modification effectuée**) :
+Règles security group en place au 07/11/2026 (**état historique, à corriger — voir §2.2**) :
 
 | SG | Règles |
 |---|---|
@@ -45,11 +45,52 @@ Règles security group en place (**aucune modification effectuée**) :
   TCP brut depuis le poste et le self-test depuis l'instance prouvent le filtrage
   (méthode de vérification : `infrastructure/aws/`, scripts `tcp_scan` + `check_exposure`).
 
-### 2.2 Recommandation (en attente d'accord — modification de SG)
+### 2.2 Durcissement SSH — décision prise, application en attente
 
-Restreindre l'SSH à votre IP uniquement : attacher le SG **`default`** (déjà à jour avec
-`[masqué : ancienne IP administrateur]/32`) ou éditer `launch-wizard-1` (0.0.0.0/0 → votre /32).
-**Aucun changement n'a été appliqué sans autorisation explicite.**
+**Décision (14/11/2026)** : restreindre l'SSH à l'IP de l'administrateur, puis retirer
+l'ouverture mondiale. Le SG `launch-wizard-1` (`[masqué : ID security group]`) est celui attaché
+à l'instance ; c'est lui qu'il faut corriger.
+
+> ⚠️ **Non appliqué à ce jour** : les identifiants AWS Academy enregistrés le 07/11 ont
+> expiré (`InvalidClientTokenId`, jetons valables ~4 h). Aucune commande AWS n'a été
+> exécutée depuis. La procédure ci-dessous est prête et rejouable.
+
+IP publique constatée le 14/11/2026 : `[masqué : IP administrateur]` (adresse **dynamique** — la
+revérifier avant d'appliquer : <https://api.ipify.org>).
+
+```bash
+SG=[masqué : ID security group]
+IP=[masqué : IP administrateur]/32          # <-- verifier votre IP publique AVANT
+
+# 1. Ajouter la regle /32 (idempotent : ignorer InvalidPermission.Duplicate)
+aws ec2 authorize-security-group-ingress --group-id $SG \
+  --protocol tcp --port 22 --cidr $IP
+
+# 2. Verifier que la regle /32 existe bien, puis seulement retirer 0.0.0.0/0
+aws ec2 describe-security-groups --group-ids $SG \
+  --query "SecurityGroups[0].IpPermissions[?FromPort==\`22\`]"
+
+aws ec2 revoke-security-group-ingress --group-id $SG \
+  --protocol tcp --port 22 --cidr 0.0.0.0/0
+```
+
+Vérification finale (doit ne plus retourner que le `/32`) :
+
+```bash
+aws ec2 describe-security-groups --group-ids $SG \
+  --query "SecurityGroups[0].IpPermissions[?FromPort==\`22\`].IpRanges[].CidrIp" --output text
+```
+
+Retour arrière (si l'accès est perdu à cause d'un changement d'IP) :
+
+```bash
+aws ec2 authorize-security-group-ingress --group-id $SG \
+  --protocol tcp --port 22 --cidr 0.0.0.0/0
+```
+
+> L'instance peut rester **arrêtée** pendant l'opération : une règle de SG ne nécessite
+> pas d'instance en cours d'exécution. En cas de verrouillage, la console EC2
+> (Instance Connect / session manager) reste un recours indépendant de la règle SSH.
 
 ### 2.3 Secrets
 

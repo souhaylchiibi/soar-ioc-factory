@@ -173,19 +173,25 @@ Total : **177 tests**, exécutés contre un **vrai PostgreSQL**
 
 | Élément | État |
 |---|---|
-| Security group de l'instance | `launch-wizard-1` — **SSH ouvert à `0.0.0.0/0`** |
+| Security group de l'instance | `launch-wizard-1` — SSH encore ouvert à `0.0.0.0/0` ; restriction à l'IP de l'administrateur **décidée le 14/11** (procédure prête, application en attente d'une session AWS valide) |
 | Ports applicatifs | **aucun** ouvert dans le security group |
 | Accès dashboard | tunnel SSH `-L 8091:127.0.0.1:80` |
 | Bases de données | jamais publiées sur l'hôte EC2 |
 | Coût | instance `stopped` hors session |
 
-⚠️ **Risque résiduel accepté** : SSH est joignable depuis Internet et repose
-uniquement sur l'authentification par clé. Durcissement recommandé (non
-appliqué, décision utilisateur en attente) :
+⚠️ **Risque résiduel actuel** : SSH est joignable depuis Internet et repose
+uniquement sur l'authentification par clé. Durcissement **décidé le 14/11/2026** :
 
 ```text
-SG launch-wizard-1 : 0.0.0.0/0 -> <IP publique de l'administrateur>/32
+SG launch-wizard-1 ([masqué : ID security group]) :
+  0.0.0.0/0  ->  <IP publique de l'administrateur>/32
 ```
+
+Procédure exacte, vérification et retour arrière :
+[`AWS_DEPLOYMENT.md`](AWS_DEPLOYMENT.md) §2.2. **Pas encore appliquée** : les
+identifiants AWS Academy du 07/11 ont expiré (`InvalidClientTokenId`) et aucune
+commande AWS n'a été exécutée depuis. L'opération ne nécessite pas que l'instance
+soit démarrée.
 
 Autres recommandations non appliquées : `fail2ban`, désactivation de
 `PasswordAuthentication`, MFA sur le compte AWS Academy.
