@@ -44,7 +44,7 @@ npm run dev
 cd "C:\Users\T480s\Desktop\SOAR project\backend"
 $env:PYTHONPATH="$PWD"; $env:POSTGRES_HOST="127.0.0.1"; $env:POSTGRES_USER="soar"
 $env:POSTGRES_PASSWORD = (Select-String -Path ..\.env -Pattern '^POSTGRES_PASSWORD=(.+)$').Matches[0].Groups[1].Value
-.\.venv\Scripts\python.exe -m pytest tests -q     # attendu : 150 passed
+.\.venv\Scripts\python.exe -m pytest tests -q     # attendu : 177 passed (~42 s)
 ```
 
 ### A6. Services optionnels (profils)
@@ -55,11 +55,27 @@ docker compose -f docker-compose.yml -f infrastructure/docker/docker-compose.sur
   --profile detection up --abort-on-container-exit --exit-code-from suricata suricata
 ```
 
-### A7. Rapport Word à jour (régénère chiffres + figures)
+### A7. Livrables à jour (chiffres + figures)
 ```powershell
 cd "C:\Users\T480s\Desktop\SOAR project"
+
+# 1. Métriques réelles + 7 graphiques + EVALUATION.md (lit PostgreSQL)
+.\backend\.venv\Scripts\python.exe scripts\evaluate_platform.py
+
+# 2. Rapport Word du jury (réutilise metrics.json + captures)
 .\backend\.venv\Scripts\python.exe scripts\generate_report.py
 # -> reports/RAPPORT_SOAR_IOC_FACTORY.docx
+```
+
+### A8. Documentation de référence
+```text
+README.md                  point d'entrée du projet (chiffres, architecture, accès)
+docs/INSTALLATION.md       installation reproductible + dépannage
+docs/WORKFLOWS.md          les 8 workflows n8n (routes, fréquences, vérification)
+docs/SECURITY.md           modèle de menace, contrôles, preuves, limites
+docs/TESTING.md            stratégie et répartition des 177 tests
+docs/USER_GUIDE.md         utilisation du dashboard et de l'API
+reports/evaluation/        EVALUATION.md + metrics.json (Phase 7)
 ```
 
 ---
@@ -141,8 +157,10 @@ Ne **jamais** `docker compose down -v` ni `docker volume rm` : cela détruirait 
 | Élément | Chemin |
 |---|---|
 | Rapport Word | `reports/RAPPORT_SOAR_IOC_FACTORY.docx` |
+| Évaluation Phase 7 | `reports/evaluation/EVALUATION.md` + `metrics.json` |
+| Graphiques de l'évaluation (7) | `reports/figures/` |
 | Captures (14) | `capture/` |
-| Docs | `docs/` (audit, architecture, AWS) |
+| Docs | `README.md` + `docs/` (installation, workflows, sécurité, tests, usage) |
 | Workflows n8n | `workflows/n8n/*.json` (8) |
 | Scripts AWS | `infrastructure/aws/` (5 scripts idempotents) |
-| Historique | `git log` (13+ commits) |
+| Historique | `git log` (16 commits) |
