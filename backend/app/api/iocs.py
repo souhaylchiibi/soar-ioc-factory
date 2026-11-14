@@ -310,7 +310,9 @@ def source_stats(db: Session = Depends(get_db)) -> list[SourceStat]:
     out = []
     for src in db.execute(select(IntelSource)).scalars().all():
         n = db.execute(
-            select(func.count(Ioc.id)).select_from(IocSource)
+            # count link rows only: selecting Ioc.id from IocSource without a
+            # join produced a cartesian product (links x total IOCs).
+            select(func.count(func.distinct(IocSource.ioc_id)))
             .where(IocSource.source_id == src.id)
         ).scalar() or 0
         out.append(SourceStat(

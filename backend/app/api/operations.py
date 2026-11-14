@@ -50,6 +50,11 @@ def collect_run(
 
     Failures are isolated per source: one dead feed never blocks the others.
     """
+    from app.collectors.abusech import (
+        MalwareBazaarCollector,
+        ThreatFoxCollector,
+        UrlhausCollector,
+    )
     from app.collectors.blocklist_de import BlocklistDeCollector
     from app.collectors.feodo import FeodoCollector
     from app.collectors.otx import OtxCollector
@@ -62,6 +67,11 @@ def collect_run(
         "urlscan": UrlscanCollector,
         # OTX: uses /pulses/subscribed when OTX_API_KEY set (verified live)
         "alienvault_otx": lambda: OtxCollector(api_key=settings.otx_api_key),
+        # abuse.ch: require ABUSECH_AUTH_KEY; without it the collector raises
+        # (a missing key is reported, never turned into an empty success).
+        "urlhaus": lambda: UrlhausCollector(auth_key=settings.abusech_auth_key),
+        "threatfox": lambda: ThreatFoxCollector(auth_key=settings.abusech_auth_key),
+        "malwarebazaar": lambda: MalwareBazaarCollector(auth_key=settings.abusech_auth_key),
     }
     if source:
         if source not in catalogue:

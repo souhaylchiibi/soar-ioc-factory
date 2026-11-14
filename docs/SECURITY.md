@@ -163,8 +163,9 @@ Sauter une étape (`NEW → PUBLISHED`) ou ressusciter un `REMOVED` lève
 | Notation / seuils | 19 tests | `test_scoring.py` |
 | Pipeline de bout en bout | 11 tests | `test_pipeline.py` |
 | MISP (client REST) | 18 tests mockés | `test_misp.py` |
+| Collecteurs abuse.ch | 14 tests hors ligne | `test_abusech.py` |
 
-Total : **177 tests**, exécutés contre un **vrai PostgreSQL**
+Total : **191 tests**, exécutés contre un **vrai PostgreSQL**
 (`soar_ioc_test`, migré par Alembic) — pas de SQLite de substitution.
 
 ---
@@ -203,7 +204,7 @@ Autres recommandations non appliquées : `fail2ban`, désactivation de
 | **Pas de TLS entre conteneurs** | trafic en clair sur le réseau Docker local | réseau bridge privé, mono-hôte |
 | **Pas de vérité terrain** | précision/rappel non calculables | proxies mesurés uniquement, jamais présentés comme précision |
 | **Plages privées acceptées** | un IOC interne peut entrer dans l'inventaire | choix fonctionnel documenté (réponse à incident) |
-| **Clé abuse.ch invalide** | 3 collecteurs inactifs | aucune donnée simulée pour compenser |
+| **Clé abuse.ch absente ou révoquée** | 3 collecteurs indisponibles | échec explicite, aucune donnée simulée pour compenser |
 | **MISP non déployé** | publication distante non exercée en réel | client + tests mockés, endpoint honnête (`skipped`) |
 
 ---
@@ -215,7 +216,7 @@ Avant une démonstration :
 - [ ] `.env` présent, non versionné, permissions restreintes
 - [ ] `git status` ne montre aucun fichier `.env` / `.pem`
 - [ ] `docker compose config` ne publie que des ports `127.0.0.1`
-- [ ] `pytest tests -q` → **177 passed**
+- [ ] `pytest tests -q` → **191 passed**
 - [ ] `GET /api/v1/system/health` → `healthy`
 - [ ] Journal d'audit : aucune action `success=false` inexpliquée
 - [ ] Aucun IOC `is_synthetic=true` présenté comme réel

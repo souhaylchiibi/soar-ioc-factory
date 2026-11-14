@@ -236,3 +236,20 @@ class TestAuditImmutability:
         with pytest.raises(Exception, match="append-only"):
             db.execute(text("DELETE FROM audit_logs"))
         db.rollback()
+
+
+class TestSourceStats:
+    def test_source_ioc_count_is_links_not_cartesian_product(self, db, registered_source) -> None:
+        """Regression: /iocs/stats/sources multiplied each count by the inventory size."""
+        from app.api.iocs import source_stats
+
+        ingest_raw(db, raw("203.0.113.9", declared="IP", source="test_source"))
+        ingest_raw(db, raw("198.51.100.7", declared="IP", source="test_source"))
+        ingest_raw(db, raw("evil.example", declared="DOMAIN", source="other_org"))
+        db.commit()
+
+        counts = {s.name: s.ioc_count for s in source_stats(db)}
+        assert counts["test_source"] == 2
+        assert counts["other_org"] == 1
+        assert counts["echo_of_test"] == 0
+        assert sum(counts.values()) == db.execute(select(func.count()).select_from(IocSource)).scalar()

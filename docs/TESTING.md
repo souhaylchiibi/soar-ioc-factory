@@ -1,6 +1,6 @@
 # Tests — stratégie, exécution, couverture réelle
 
-> **177 tests, 177 au vert** (≈ 42 s), exécutés contre un **vrai PostgreSQL**
+> **192 tests, 192 au vert** (≈ 38 s), exécutés contre un **vrai PostgreSQL**
 > migré par Alembic. Aucun mock de base de données.
 
 ---
@@ -35,7 +35,7 @@ $env:POSTGRES_PASSWORD=(Select-String -Path ..\.env -Pattern '^POSTGRES_PASSWORD
 Résultat attendu :
 
 ```
-177 passed in ~42s
+192 passed in ~38s
 ```
 
 Options utiles :
@@ -56,20 +56,21 @@ Options utiles :
 
 ---
 
-## 3. Répartition des 177 tests
+## 3. Répartition des 192 tests
 
 | Module | Tests | Ce qui est prouvé |
 |---|---:|---|
 | `test_normalization.py` | 35 | types, formes canoniques, rejets, empreintes, inférence |
 | `test_security.py` | 27 | audit immuable, entrées hostiles, états, anti-collusion, secrets, ports |
 | `test_lifecycle.py` | 23 | transitions légales/illégales, audit, niveaux de risque, expiration |
-| `test_ingest.py` | 21 | création, dédup, mise à jour, provenance, rejet, synthétique |
+| `test_ingest.py` | 22 | création, dédup, mise à jour, provenance, rejet, synthétique, compteur par source |
 | `test_scoring.py` | 19 | composantes, fraîcheur, seuils, pénalités, explication, anti-collusion |
 | `test_misp.py` | 18 | client REST, publication, révocation, relecture, erreurs |
 | `test_providers.py` | 16 | collecteurs (parsing, limites, pannes), enrichissement, cache |
+| `test_abusech.py` | 14 | URLhaus/ThreatFox/MalwareBazaar hors ligne : GET vs POST, clé refusée, parsing |
 | `test_pipeline.py` | 11 | pipeline complet, reprise, décisions, expiration/retrait |
 | `test_health.py` | 7 | `/health`, `/ready`, `/system/health`, dégradations |
-| **Total** | **177** | |
+| **Total** | **192** | |
 
 ---
 
@@ -156,7 +157,7 @@ Client REST testé avec un transport simulé (aucun appel réseau) :
 |---|---|---|
 | Interface React | pas de tests unitaires frontend | `tsc -b` + `vite build` sans erreur, 13 routes vérifiées manuellement, 0 erreur console (captures) |
 | Appels réels OTX / AbuseIPDB / MISP | dépendances réseau et quotas | tests avec transport simulé ; exécution réelle tracée dans le rapport |
-| Charge / performance | hors périmètre académique | mesure ponctuelle : 27 159 scores/s (moteur), 1,48 IOC/s (lot complet) |
+| Charge / performance | hors périmètre académique | mesure ponctuelle : 21 809 scores/s (moteur), 1,32 IOC/s (lot complet) |
 | Reprise après coupure brutale | difficile à scripter proprement | testé manuellement (crash Docker Desktop du 07/11, données intactes) |
 | Sécurité offensive (pentest) | hors périmètre | modèle de menace + checklist dans `SECURITY.md` |
 

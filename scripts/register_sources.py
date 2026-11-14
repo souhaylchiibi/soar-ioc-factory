@@ -23,9 +23,15 @@ SOURCES = [
     ("alienvault_otx", "alienvault", 80,
      "https://otx.alienvault.com/api/v1/",
      SourceKind.OPEN_SOURCE, False, 60),
-    # Registered but disabled: the API now requires a key (documented, tested).
+    # abuse.ch feeds: collected only when ABUSECH_AUTH_KEY is configured.
     ("urlhaus", "abuse_ch", 70,
      "https://urlhaus-api.abuse.ch/v1/",
+     SourceKind.COMMUNITY, True, 10),
+    ("threatfox", "abuse_ch", 75,
+     "https://threatfox-api.abuse.ch/api/v1/",
+     SourceKind.COMMUNITY, True, 10),
+    ("malwarebazaar", "abuse_ch", 70,
+     "https://mb-api.abuse.ch/api/v1/",
      SourceKind.COMMUNITY, True, 10),
     ("synthetic_lab", "synthetic_lab", 50,
      None, SourceKind.SYNTHETIC, False, 1000),

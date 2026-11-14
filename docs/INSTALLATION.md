@@ -54,13 +54,13 @@ py -3.11 -c "import secrets; print(secrets.token_urlsafe(48))"
 py -3.11 -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
-Clés API facultatives (les collecteurs fonctionnent sans) :
+Clés API facultatives (les collecteurs fonctionnent sans, sauf abuse.ch) :
 
 | Variable | Usage | Sans clé |
 |---|---|---|
 | `OTX_API_KEY` | pulses OTX abonnés | OTX public limité |
 | `ABUSEIPDB_API_KEY` | réputation IP | AbuseIPDB ignoré |
-| `ABUSE_CH_AUTH_KEY` | URLhaus / ThreatFox / MalwareBazaar | collecteurs inactifs |
+| `ABUSECH_AUTH_KEY` | URLhaus / ThreatFox / MalwareBazaar | collecteurs en échec explicite (aucune donnée simulée) |
 | `MISP_URL` + `MISP_KEY` | publication MISP | endpoint répond `skipped` |
 
 > ⚠️ `.env` est ignoré par git. Ne jamais le copier dans un rendu, une capture

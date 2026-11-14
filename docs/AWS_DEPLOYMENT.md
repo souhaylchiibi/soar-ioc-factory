@@ -113,6 +113,11 @@ aws ec2 authorize-security-group-ingress --group-id $SG \
 - ⚠️ **Crédits Learner Lab quotidiens** : une instance t2.large allumée 24 h/24 les consomme.
   **Vérifiez votre solde dans la console** (bannière de crédits du lab).
 
+> **État à la livraison (14/11/2026, 02:00 UTC+1)** : instance `[masqué : ID instance EC2]`
+> **stopped** (`describe-instances` : `State.Name = stopped`, adresse publique libérée),
+> tunnel SSH fermé, port local 8091 refusé. Seul le volume EBS reste facturé (≈ 0,11 $/j).
+> La démonstration AWS de la Figure 22 a été capturée avant l'arrêt.
+
 ### Cycle de vie (choix validés par l'utilisateur)
 
 ```bash

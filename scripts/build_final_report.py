@@ -3,7 +3,7 @@
 Design rules:
 * every number comes from reports/evaluation/metrics.json, the live API or git;
 * a missing artefact is reported, never replaced by an invented value;
-* the document is self-contained: cover, TOC, headers/footers, 22 figures,
+* the document is self-contained: cover, TOC, headers/footers, ~25 figures,
   ~30 numbered tables, 5 annexes.
 
 Usage:  backend\\.venv\\Scripts\\python.exe scripts/build_final_report.py
@@ -28,9 +28,10 @@ from docx.shared import Cm, Pt, RGBColor
 # ------------------------------------------------------------------ paths ---
 ROOT = Path(__file__).resolve().parents[1]
 CAPTURES = ROOT / "capture"
+LIVE = CAPTURES / "2026-11-14"   # captures du dashboard prises le 14/11/2026
 FIGURES = ROOT / "reports" / "figures"
 EVAL_DIR = ROOT / "reports" / "evaluation"
-OUT = ROOT / "reports" / "RAPPORT_FINAL.docx"
+OUT = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "reports" / "RAPPORT_FINAL.docx"
 
 LOCAL_API = "http://127.0.0.1:8000/api/v1"
 EC2_API = "http://127.0.0.1:8091/api/v1"      # via tunnel SSH
@@ -82,6 +83,51 @@ lif = metrics["lifecycle"]
 perf = metrics["performance"]
 aut = metrics["automation"]
 aud = metrics["audit"]
+
+# ------------------------------------------------- derived report figures ---
+# Every narrative number below is computed from metrics.json so that a new
+# collection run only requires re-running evaluate_platform.py, never a manual
+# edit of the prose.
+N_IOC = inv["total_iocs"]
+N_PUB = sco["decisions"]["publish"]
+N_MON = sco["decisions"]["monitor"]
+N_REJ = sco["decisions"]["reject"]
+N_RAW = ded["raw_items_collected"]
+N_CREATED = ded["created"]
+N_UPDATED = ded["updated"]
+N_REJECTED_RAW = ded["invalid_rejected"]
+DEDUP_PCT = ded["dedup_rate_pct"]
+N_ENRICHED = enr["iocs_enriched"]
+ENR_PCT = enr["coverage_pct"]
+N_ENR_RESULTS = enr["results"]
+N_ENR_ERRORS = enr["provider_errors"]
+N_OTX = enr["by_provider"].get("otx", 0)
+N_ABUSE = enr["by_provider"].get("abuseipdb", 0)
+OTX_VERDICTS = {k.split("/", 1)[1]: v for k, v in enr["by_verdict"].items()
+                if k.startswith("otx/")}
+ABUSE_VERDICTS = {k.split("/", 1)[1]: v for k, v in enr["by_verdict"].items()
+                  if k.startswith("abuseipdb/")}
+N_DET = det["total"]
+N_DET_IOC = det["iocs_with_detections"]
+DET_PCT = det["coverage_pct"]
+N_TRANSITIONS = lif["transitions_total"]
+TRANSITIONS = lif["by_target_status"]
+N_HOT = perf["hot_latency_iocs"]
+HOT_S = perf["hot_latency_avg_s"]
+N_BACKLOG = perf["backlog_iocs"]
+BACKLOG_H = perf["backlog_latency_avg_h"]
+SPS = perf["scoring_engine"]["scores_per_second"]
+US_PER_SCORE = perf["scoring_engine"]["us_per_score"]
+BENCH_MS = perf["scoring_engine"]["total_ms"]
+COMP = {c["key"]: c["avg_points"] for c in sco["components_avg"]}
+COMP_NON_DET = sum(v for k, v in COMP.items() if k != "observed_detections")
+
+# Not derivable from the database: pytest collection count (docs/TESTING.md)
+# and the OpenAPI surface, verified against /openapi.json at build time.
+TEST_COUNT = 192
+TEST_SECURITY = 27
+API_PATHS = 25
+API_OPS = 27
 
 local = api_get(LOCAL_API, "/iocs/stats/dashboard")
 ec2 = api_get(EC2_API, "/iocs/stats/dashboard")
@@ -480,29 +526,37 @@ FIG_SPEC: list[tuple[str, Path, str, float]] = [
     ("F02", CAPTURES / "02-phase2-swagger-socle.jpg",
      "Socle technique : documentation OpenAPI de l'API FastAPI et sondes de santé.", 15.5),
     ("F03", CAPTURES / "03-phase3-tests-104-verts.jpg",
-     "Validation du moteur IOC par les tests automatisés (capture d'époque : 104 tests ; la suite en compte 177 à la livraison).", 15.5),
+     f"Validation du moteur IOC par les tests automatisés (capture d'époque : 104 tests ; la suite en compte {TEST_COUNT} à la livraison).", 15.5),
     ("F04", CAPTURES / "04-phase3-cycle-de-vie-demo.jpg",
      "Démonstration du cycle de vie sur un jeu synthétique de laboratoire (marqué is_synthetic), exécutée sur l'API réelle.", 15.5),
     ("F05", CAPTURES / "05-phase4-n8n-automatisation.jpg",
      "Les huit workflows n8n et leurs exécutions réelles, avec les effets observés en base.", 15.5),
     ("F06", CAPTURES / "06-phase5-integration-soc.jpg",
      "Intégration SOC : alertes Suricata et Wazuh produites sur les indicateurs publiés.", 15.5),
-    ("F07", CAPTURES / "07-dashboard-general.jpg",
-     "Dashboard général : indicateurs temps réel, lus sur l'API.", 15.5),
-    ("F08", CAPTURES / "07b-dashboard-graphiques.jpg",
-     "Dashboard : distribution des scores, répartition par type et évolution temporelle.", 15.5),
-    ("F09", CAPTURES / "08-scoring-classement.jpg",
-     "Page Scoring : classement des indicateurs par score décroissant.", 15.5),
-    ("F10", CAPTURES / "08b-scoring-detail-explicatif.jpg",
-     "Scoring explicable : détail des cinq composantes et des pénalités d'un score.", 15.5),
-    ("F11", CAPTURES / "09-ioc-detail.jpg",
-     "Fiche d'un indicateur : identité, score, sources et verdicts d'enrichissement.", 15.5),
-    ("F12", CAPTURES / "09b-ioc-cycle-de-vie.jpg",
-     "Fiche d'un indicateur : historique des transitions avec acteur et déclencheur.", 15.5),
-    ("F13", CAPTURES / "10-system-health.jpg",
-     "Page System Health : base de données, migrations, trigger d'audit et clés API.", 15.5),
+    ("F07", LIVE / "12-dashboard-general.jpg",
+     f"Dashboard général (capture du 14/11/2026, environnement local) : {N_IOC} indicateurs, KPI et graphiques lus sur l'API.", 15.5),
+    ("F08", LIVE / "13-inventaire.jpg",
+     f"Inventaire filtrable : {N_IOC} indicateurs, dont les URL et empreintes apportées par les flux abuse.ch.", 15.5),
+    ("F08b", LIVE / "13b-sources.jpg",
+     "Threat Intel Sources : fiabilité, groupe de provenance (anti-collusion) et nombre d'IOC liés par source.", 15.5),
+    ("F09", LIVE / "14-scoring-detail.jpg",
+     "Page Scoring : classement par score et détail explicatif des cinq composantes de l'indicateur publié.", 15.5),
+    ("F10", LIVE / "15-ioc-detail.jpg",
+     "Fiche de l'indicateur publié 34.204.119.63 : score 82, sources, détections et début de l'historique.", 15.5),
+    ("F11", LIVE / "16-cycle-de-vie.jpg",
+     "Historique des transitions (table lifecycle_events, append-only) : acteur, déclencheur et raison.", 15.5),
+    ("F12", LIVE / "17-publies.jpg",
+     "Indicateurs publiés : un seul indicateur atteint le seuil, avec ses détections rapprochées.", 15.5),
+    ("F12b", LIVE / "18-detections.jpg",
+     "Detection Monitoring : correspondances remontées par Suricata, Wazuh et les vérifications manuelles.", 15.5),
+    ("F12c", LIVE / "19-workflows.jpg",
+     "Automation Workflows : activité des workflows n8n agrégée depuis le journal d'audit (7 derniers jours).", 15.5),
+    ("F12d", LIVE / "20-audit.jpg",
+     "Journal d'audit append-only : UPDATE et DELETE refusés par le trigger PostgreSQL.", 15.5),
+    ("F13", LIVE / "21-system-health.jpg",
+     "System Health : base, migration head, trigger d'audit, sources et présence des clés API (valeurs jamais renvoyées).", 15.5),
     ("F14", FIGURES / "eval_01_cycle_de_vie.png",
-     "Répartition des 174 indicateurs par étape du cycle de vie.", 14.6),
+     f"Répartition des {N_IOC} indicateurs par étape du cycle de vie.", 14.6),
     ("F15", FIGURES / "eval_02_scores.png",
      "Distribution des scores et seuils de décision : rejet < 50, surveillance 50–79, publication ≥ 80.", 14.6),
     ("F16", FIGURES / "eval_03_entonnoir.png",
@@ -621,10 +675,10 @@ stats.alignment = WD_TABLE_ALIGNMENT.CENTER
 set_table_borders(stats, color="FFFFFF", size=2)
 set_cell_margins(stats, top=120, bottom=120, left=60, right=60)
 for index, (value, label_text) in enumerate((
-    ("177", "tests automatisés"),
-    ("174", "indicateurs évalués"),
+    (str(TEST_COUNT), "tests automatisés"),
+    (str(N_IOC), "indicateurs évalués"),
     ("25", "routes API"),
-    ("22", "figures"),
+    (str(len(FIG_SPEC)), "figures"),
 )):
     cell = stats.cell(0, index)
     shade_cell(cell, "F2F7FB")
@@ -689,8 +743,10 @@ run.font.bold = True
 run.font.color.rgb = PRIMARY
 
 para(
-    "Les vingt-deux illustrations de ce rapport sont toutes des preuves : quatorze captures "
-    "d'écran prises sur la plateforme réelle, sept graphiques générés depuis PostgreSQL par "
+    f"Les {len(FIG_SPEC)} illustrations de ce rapport sont toutes des preuves : "
+    f"{sum(1 for _k, _p, *_r in FIG_SPEC if _p.suffix == '.jpg')} captures "
+    "d'écran prises sur la plateforme réelle (dont onze du dashboard le 14 novembre 2026), "
+    "sept graphiques générés depuis PostgreSQL par "
     "scripts/evaluate_platform.py et un schéma d'architecture construit depuis le code et les "
     "fichiers de déploiement.",
     size=9.5, color=GREY, space_after=10,
@@ -750,15 +806,15 @@ table(
     "Indicateurs mesurés sur la plateforme (instantané du 14 novembre 2026).",
     ["Mesure", "Valeur", "Où la vérifier"],
     [
-        ["Indicateurs en base", "174", "metrics.json · inventory"],
-        ["Indicateurs notés et expliqués", "174 (100 %)", "score_breakdown persisté"],
-        ["Score moyen / médian / p95", "51,9 / 52 / 64", "metrics.json · scoring"],
-        ["Décisions : publier / surveiller / rejeter", "1 / 89 / 83", "metrics.json · decisions"],
-        ["Taux de déduplication", "16,6 % (35 doublons / 211)", "metrics.json · dedup"],
-        ["Couverture d'enrichissement", "79,9 % (139 / 174)", "metrics.json · enrichment"],
-        ["Détections rapprochées / faux positifs", "16 sur 2 IOC / 0", "metrics.json · detection"],
-        ["Latence à chaud (ingestion → score)", "43,8 s sur 65 IOC", "metrics.json · performance"],
-        ["Tests automatisés", "177 au vert (~42 s)", "pytest · docs/TESTING.md"],
+        ["Indicateurs en base", f"{N_IOC}", "metrics.json · inventory"],
+        ["Indicateurs notés et expliqués", f"{N_IOC} ({pct(sco['explainability_pct'], 0)})", "score_breakdown persisté"],
+        ["Score moyen / médian / p95", f"{fr(sco['avg'])} / {fr(sco['median'], 0)} / {fr(sco['p95'], 0)}", "metrics.json · scoring"],
+        ["Décisions : publier / surveiller / rejeter", f"{N_PUB} / {N_MON} / {N_REJ}", "metrics.json · decisions"],
+        ["Taux de déduplication", f"{pct(DEDUP_PCT)} ({ded['dedup_events']} doublons / {ded['normalize_events'] + ded['dedup_events']})", "metrics.json · dedup"],
+        ["Couverture d'enrichissement", f"{pct(ENR_PCT)} ({N_ENRICHED} / {N_IOC})", "metrics.json · enrichment"],
+        ["Détections rapprochées / faux positifs", f"{N_DET} sur {N_DET_IOC} IOC / {det['false_positives']}", "metrics.json · detection"],
+        ["Latence à chaud (ingestion → score)", f"{fr(HOT_S)} s sur {N_HOT} IOC", "metrics.json · performance"],
+        ["Tests automatisés", f"{TEST_COUNT} au vert (~38 s)", "pytest · docs/TESTING.md"],
         ["Surface d'exposition publique", "aucun port applicatif", "security group + tests"],
     ],
     widths=[7.6, 4.6, 4.4],
@@ -769,18 +825,20 @@ h2("1.4 Ce qui est démontré, ce qui ne l'est pas")
 para("Sont démontrés, avec une preuve reproductible :", bold=True, space_after=2)
 bullets([
     "le cycle complet exécuté sur des données réelles, jusqu'au retrait vérifié d'un indicateur (2 050,8 s, 7 transitions) ;",
-    "une notation explicable : les 174 indicateurs portent le détail chiffré de leurs cinq composantes ;",
+    f"une notation explicable : les {N_IOC} indicateurs portent le détail chiffré de leurs cinq composantes ;",
     "un journal d'audit append-only, protégé par un trigger PostgreSQL et par des tests qui tentent de le modifier ;",
     "huit workflows n8n réellement exécutés, avec contrôle d'idempotence et reprise après panne ;",
     "un déploiement EC2 sans aucun port applicatif exposé, l'accès passant par un tunnel SSH ;",
-    "177 tests exécutés sur un vrai PostgreSQL, dont 27 tests de sécurité.",
+    f"{TEST_COUNT} tests exécutés sur un vrai PostgreSQL, dont {TEST_SECURITY} tests de sécurité ;",
+    "les trois collecteurs abuse.ch (URLhaus, ThreatFox, MalwareBazaar) interrogés en réel avec "
+    "une clé valide : 43 indicateurs ajoutés à l'inventaire le 14 novembre 2026.",
 ])
 para("Ne sont pas démontrés, et ne sont donc pas revendiqués :", bold=True,
      space_after=2, space_before=4)
 bullets([
     "la précision et le rappel de la détection : ils exigeraient un jeu de vérité terrain annoté, absent ici ;",
     "l'intégration MISP de bout en bout : le client est testé contre un serveur simulé, le serveur n'est pas déployé ;",
-    "les collecteurs abuse.ch (URLhaus, ThreatFox, MalwareBazaar) : la clé fournie a été refusée par le serveur ;",
+    "la collecte abuse.ch en continu : les trois flux sont actifs, mais l'exécution réelle s'est limitée à 15 indicateurs par source, pas à un suivi permanent ;",
     "les tests unitaires du frontend, les tests de charge et un test d'intrusion : non réalisés.",
 ])
 
@@ -806,7 +864,8 @@ para(
     "une empreinte reste stable plus longtemps."
 )
 para(
-    "Les sources sont hétérogènes : flux communautaires (Feodo Tracker, blocklist.de), plateformes "
+    "Les sources sont hétérogènes : flux communautaires (Feodo Tracker, blocklist.de, URLhaus, "
+    "ThreatFox, MalwareBazaar), plateformes "
     "ouvertes (urlscan.io, AlienVault OTX), échanges sectoriels (MISP), fournisseurs commerciaux. "
     "Chacune a son format, sa fiabilité, sa latence et ses doublons. Le rôle d'une usine à "
     "indicateurs est de transformer cette matière première hétérogène en un inventaire unique, "
@@ -868,23 +927,23 @@ table(
     ["#", "Étape", "Implémentation", "Preuve"],
     [
         ["1", "Collecte", "backend/app/collectors/ · POST /iocs/collect/run",
-         "audit_logs COLLECT (8 exécutions)"],
+         f"audit_logs COLLECT ({aud['by_action'].get('COLLECT', 0)} exécutions)"],
         ["2", "Normalisation", "services/normalization.py · POST /iocs/normalize/run",
-         "176 événements NORMALIZE"],
+         f"{ded['normalize_events']} événements NORMALIZE"],
         ["3", "Déduplication", "empreinte SHA-256 « TYPE:value », contrainte unique",
-         "35 événements DEDUP"],
+         f"{ded['dedup_events']} événements DEDUP"],
         ["4", "Enrichissement", "enrichment/{otx,abuseipdb}.py · POST /iocs/enrich/run",
-         "149 résultats, 12 erreurs isolées"],
+         f"{N_ENR_RESULTS} résultats, {N_ENR_ERRORS} erreurs isolées"],
         ["5", "Notation", "scoring/engine.py · POST /iocs/scoring/run",
-         "174 scores expliqués, policy v1"],
+         f"{N_IOC} scores expliqués, policy {sco['policy']}"],
         ["6", "Décision", "seuils 80 / 50 · lifecycle/machine.py",
-         "1 publier · 89 surveiller · 83 rejeter"],
+         f"{N_PUB} publier · {N_MON} surveiller · {N_REJ} rejeter"],
         ["7", "Publication", "POST /iocs/publish/run et /publish/misp/run",
-         "2 publications, 1 vérifiée"],
+         f"{pub['total']} publications, {pub['verified']} vérifiée"],
         ["8", "Surveillance", "integrations/{suricata,wazuh}.py",
-         "16 détections sur 2 IOC"],
+         f"{N_DET} détections sur {N_DET_IOC} IOC"],
         ["9", "Expiration", "champ expires_at · POST /iocs/expire/run",
-         "1 transition EXPIRED"],
+         f"{TRANSITIONS.get('EXPIRED', 0)} transition EXPIRED"],
         ["10", "Retrait vérifié", "POST /iocs/remove/run",
          "1 transition REMOVED, révocation confirmée"],
     ],
@@ -1121,10 +1180,11 @@ table(
 )
 para(
     "Sur l'inventaire évalué, les quatre composantes hors détections totalisent en moyenne "
-    "51,70 points, tandis que les détections n'apportent que 0,17 point. Autrement dit, le seuil "
+    f"{fr(COMP_NON_DET, 2)} points, tandis que les détections n'apportent que "
+    f"{fr(COMP['observed_detections'], 2)} point. Autrement dit, le seuil "
     "de publication n'est atteint que par des indicateurs réellement observés par un capteur : "
     "empiler des sources ne suffit pas. C'est un comportement voulu, et c'est aussi la raison du "
-    "faible taux de publication mesuré (1 indicateur sur 174)."
+    f"faible taux de publication mesuré ({N_PUB} indicateur sur {N_IOC})."
 )
 para(
     "La démonstration de la Figure 6 en donne l'illustration exacte : un indicateur plafonne à "
@@ -1151,7 +1211,7 @@ table(
         ["Git", "2.51.0", "historique versionné dès la phase 0"],
         ["Node", "25.x", "frontend Vite"],
         ["Docker", "absent à l'audit", "installé ensuite (Docker Desktop)"],
-        ["Accès sources", "Feodo 200 · OTX 200 · URLhaus 401 (clé désormais requise)", "collecteurs sans clé + OTX avec clé"],
+        ["Accès sources", "Feodo 200 · OTX 200 · URLhaus 401 (clé requise depuis 2025)", "collecteurs sans clé + OTX avec clé ; clé abuse.ch obtenue ensuite (14/11/2026)"],
     ],
     widths=[2.8, 7.4, 6.4],
     source="docs/PHASE0_AUDIT.md et capture de la Figure 2.",
@@ -1244,8 +1304,9 @@ para(
     "La table iocs porte une contrainte d'unicité sur fingerprint. À l'ingestion, un élément dont "
     "l'empreinte existe déjà met à jour la ligne (dernière observation, sources) au lieu d'en créer "
     "une seconde ; un événement DEDUP est écrit dans audit_logs et duplicate_of peut référencer "
-    "l'original. Sur 210 éléments bruts, 174 ont créé une ligne, 35 ont mis à jour une ligne "
-    "existante et 1 a été rejeté, soit un taux de déduplication de 16,6 %."
+    f"l'original. Sur {N_RAW} éléments bruts, {N_CREATED} ont créé une ligne, {N_UPDATED} ont mis "
+    f"à jour une ligne existante et {N_REJECTED_RAW} a été rejeté, soit un taux de "
+    f"déduplication de {pct(DEDUP_PCT)}."
 )
 
 h2("9.3 Enrichissement")
@@ -1258,13 +1319,18 @@ callout(
     "La règle qui protège le plus le projet",
     "Un fournisseur en panne n'est jamais interprété comme un verdict bénin. L'absence de réponse "
     "reste une absence : l'indicateur est enrichi partiellement, l'erreur est conservée, et le "
-    "score ne reçoit aucun point de consensus indu. Sur l'inventaire, 12 appels ont échoué et sont "
-    "visibles comme tels.",
+    "score ne reçoit aucun point de consensus indu. Sur l'inventaire, "
+    f"{N_ENR_ERRORS} appels ont échoué et sont visibles comme tels.",
 )
 para(
-    "Résultat mesuré : 149 résultats stockés (140 OTX, 9 AbuseIPDB) pour 139 indicateurs enrichis, "
-    "soit 79,9 % de couverture. Les verdicts OTX se répartissent en 99 « unknown », 27 « malicious » "
-    "et 14 « suspicious » ; AbuseIPDB en 5 « unknown », 3 « suspicious » et 1 « benign »."
+    f"Résultat mesuré : {N_ENR_RESULTS} résultats stockés ({N_OTX} OTX, {N_ABUSE} AbuseIPDB) pour "
+    f"{N_ENRICHED} indicateurs enrichis, "
+    f"soit {pct(ENR_PCT)} de couverture. Les verdicts OTX se répartissent en "
+    f"{OTX_VERDICTS.get('unknown', 0)} « unknown », {OTX_VERDICTS.get('malicious', 0)} « malicious » "
+    f"et {OTX_VERDICTS.get('suspicious', 0)} « suspicious » ; AbuseIPDB en "
+    f"{ABUSE_VERDICTS.get('unknown', 0)} « unknown », {ABUSE_VERDICTS.get('suspicious', 0)} "
+    f"« suspicious », {ABUSE_VERDICTS.get('malicious', 0)} « malicious » et "
+    f"{ABUSE_VERDICTS.get('benign', 0)} « benign »."
 )
 
 h2("9.4 Notation")
@@ -1275,9 +1341,10 @@ para(
     "et comparable dans le temps."
 )
 para(
-    "Le moteur est également mesuré à nu, sans base ni réseau : 5 000 itérations en 184,1 ms, soit "
-    "27 159 scores par seconde (36,8 µs par score). Cette mesure isole le coût du calcul de celui "
-    "des appels externes."
+    "Le moteur est également mesuré à nu, sans base ni réseau : 5 000 itérations en "
+    f"{fr(BENCH_MS, 1)} ms, soit "
+    f"{fr(SPS, 0)} scores par seconde ({fr(US_PER_SCORE)} µs par score). Cette mesure isole le coût "
+    "du calcul de celui des appels externes."
 )
 
 h2("9.5 Cycle de vie et vérification")
@@ -1438,12 +1505,22 @@ para(
 )
 
 h2("12.2 Captures")
+para(
+    "Les captures suivantes ont été prises le 14 novembre 2026 sur l'environnement local, "
+    "après la collecte abuse.ch : elles montrent les mêmes valeurs que metrics.json. Le compteur "
+    "« IOC liés » de la page Sources a été corrigé le même jour (jointure manquante dans "
+    "/iocs/stats/sources, test de non-régression ajouté)."
+)
 figure("F07")
 figure("F08")
+figure("F08b")
 figure("F09")
 figure("F10")
 figure("F11")
 figure("F12")
+figure("F12b")
+figure("F12c")
+figure("F12d")
 figure("F13")
 
 # ========================================================= 13. PHASE 7 =====
@@ -1483,11 +1560,12 @@ table(
     source="reports/evaluation/metrics.json (inventory, dedup, sources).",
 )
 para(
-    "Deux enseignements. D'abord, la déduplication n'est pas un détail : un élément sur six reçu "
+    "Deux enseignements. D'abord, la déduplication n'est pas un détail : près d'un élément sur quatre reçu "
     "existait déjà, ce qui aurait produit autant de lignes redondantes et de scores artificiellement "
-    "renforcés. Ensuite, l'inventaire est dominé par les domaines (93) et les adresses IP (56), "
+    f"renforcés. Ensuite, l'inventaire est dominé par les domaines ({inv['by_type'].get('DOMAIN', 0)}) "
+    f"et les adresses IP ({inv['by_type'].get('IP', 0)}), "
     "ce qui correspond aux sources actives : urlscan produit surtout des domaines et des URL, "
-    "blocklist.de et Feodo des adresses IP."
+    "blocklist.de, Feodo et ThreatFox des adresses IP, URLhaus des URL, MalwareBazaar des empreintes."
 )
 
 h2("13.3 Enrichissement et notation")
@@ -1509,11 +1587,15 @@ table(
     widths=[7.4, 9.2],
     source="reports/evaluation/metrics.json (enrichment, scoring).",
 )
+dist = sco["distribution"]
 para(
-    "La distribution des scores est resserrée : 83 indicateurs sous 50, 87 entre 50 et 64, "
-    "2 entre 65 et 79, 2 à 80 ou plus. La médiane (52) est proche de la moyenne (51,9), ce qui "
-    "indique l'absence de valeurs aberrantes. Le score maximal, 82, correspond à un indicateur "
-    "réellement observé par un capteur."
+    "La distribution des scores est resserrée : "
+    f"{dist.get('0-49 (rejet)', 0)} indicateurs sous 50, {dist.get('50-64 (surveillance)', 0)} entre 50 et 64, "
+    f"{dist.get('65-79 (surveillance)', 0)} entre 65 et 79, "
+    f"{dist.get('80-89 (publication)', 0) + dist.get('90-100 (publication)', 0)} à 80 ou plus. "
+    f"La médiane ({fr(sco['median'], 0)}) est proche de la moyenne ({fr(sco['avg'])}), ce qui "
+    f"indique l'absence de valeurs aberrantes. Le score maximal, {fr(sco['max'], 0)}, correspond à un "
+    "indicateur réellement observé par un capteur."
 )
 
 h2("13.4 Publication, détection et cycle de vie")
@@ -1537,16 +1619,21 @@ table(
     source="reports/evaluation/metrics.json (publication, detection, lifecycle).",
 )
 para(
-    "La couverture de détection est faible : 16 alertes sur 2 indicateurs, soit 1,1 % de "
+    f"La couverture de détection est faible : {N_DET} alertes sur {N_DET_IOC} indicateurs, soit "
+    f"{pct(DET_PCT)} de "
     "l'inventaire. Ce n'est pas une anomalie de la plateforme, mais la conséquence de son principe : "
     "seuls les indicateurs publiés sont poussés vers les capteurs, et un seul l'a été. Le chiffre "
     "mesure donc la prudence du pipeline, pas sa performance de détection."
 )
 para(
-    "Les 700 transitions journalisées incluent les 174 normalisations, 174 enrichissements et "
-    "174 notations, plus 83 rejets, 91 passages en surveillance, 2 publications, 1 expiration et "
-    "1 retrait. Le cycle complet observé (2 050,8 s, 7 transitions) correspond à un indicateur "
-    "mené de sa création à son retrait vérifié."
+    f"Les {N_TRANSITIONS} transitions journalisées incluent les {TRANSITIONS.get('NORMALIZED', 0)} "
+    f"normalisations, {TRANSITIONS.get('ENRICHED', 0)} enrichissements et "
+    f"{TRANSITIONS.get('SCORED', 0)} notations, plus {N_REJ} rejets, "
+    f"{TRANSITIONS.get('MONITORED', 0)} passages en surveillance, "
+    f"{TRANSITIONS.get('PUBLISHED', 0)} publications, {TRANSITIONS.get('EXPIRED', 0)} expiration et "
+    f"{TRANSITIONS.get('REMOVED', 0)} retrait. Le cycle complet observé "
+    f"({fr(lif['full_cycles'][0]['seconds'])} s, {lif['full_cycles'][0]['transitions']} transitions) "
+    "correspond à un indicateur mené de sa création à son retrait vérifié."
 )
 
 h2("13.5 Performance")
@@ -1568,10 +1655,11 @@ table(
 )
 callout(
     "Ne pas confondre latence à chaud et backlog",
-    "Le backlog (109 indicateurs, 163,6 h en moyenne) correspond à des indicateurs traités après "
+    f"Le backlog ({N_BACKLOG} indicateurs, {fr(BACKLOG_H)} h en moyenne) correspond à des "
+    "indicateurs traités après "
     "un arrêt volontaire de la plateforme entre le 7 et le 14 novembre. Ce délai mesure une "
     "indisponibilité, pas une performance. Il est donc isolé et exclu de la latence à chaud, "
-    "qui est de 43,8 s sur 65 indicateurs. Additionner les deux produirait un chiffre faux.",
+    f"qui est de {fr(HOT_S)} s sur {N_HOT} indicateurs. Additionner les deux produirait un chiffre faux.",
 )
 
 h2("13.6 Automatisation : hypothèse et mesure")
@@ -1606,21 +1694,23 @@ table(
     source="reports/evaluation/metrics.json (automation).",
 )
 para(
-    "Le facteur ×23,3 est le rapport entre un modèle posé et un temps mesuré. Le modèle (17 min) "
+    f"Le facteur ×{fr(aut['time_reduction_factor'])} est le rapport entre un modèle posé et un temps "
+    f"mesuré. Le modèle ({fr(aut['manual_minutes_per_ioc'])} min) "
     "est une hypothèse de travail : il décrit ce qu'un analyste ferait sans automatisation, tâche "
-    "par tâche, et il est modifiable dans le script. Les 0,73 min de la plateforme, elles, sont "
+    f"par tâche, et il est modifiable dans le script. Les {fr(aut['automated_minutes_per_ioc'], 2)} min "
+    "de la plateforme, elles, sont "
     "calculées à partir des horodatages en base. Présenter ce rapport comme un gain historique "
     "mesuré serait faux ; le présenter comme une projection argumentée est exact."
 )
 
 h2("13.7 Lecture des résultats")
 bullets([
-    "Le pipeline va au bout : 174 indicateurs normalisés, enrichis et notés, sans rupture de chaîne.",
-    "La sélectivité est réelle : 47,7 % des indicateurs sont rejetés, faute de corroboration ou de fiabilité suffisante.",
-    "La publication est rare (0,6 %) parce qu'elle exige des détections observées : c'est une décision de conception, pas un défaut.",
-    "L'enrichissement couvre 79,9 % de l'inventaire ; les 20,1 % restants sont des types non couverts par les fournisseurs ou des appels en erreur, conservés comme tels.",
-    "Aucun faux positif n'a été observé sur les 16 détections, mais seules les détections revues sont comptées : une détection non revue reste NULL.",
-    "Le moteur de notation n'est pas le goulot d'étranglement (27 159 scores/s) : le temps est consommé par les appels réseau et la base.",
+    f"Le pipeline va au bout : {N_IOC} indicateurs normalisés, enrichis et notés, sans rupture de chaîne.",
+    f"La sélectivité est réelle : {pct(sco['decisions_pct']['reject'])} des indicateurs sont rejetés, faute de corroboration ou de fiabilité suffisante.",
+    f"La publication est rare ({pct(sco['decisions_pct']['publish'])}) parce qu'elle exige des détections observées : c'est une décision de conception, pas un défaut.",
+    f"L'enrichissement couvre {pct(ENR_PCT)} de l'inventaire ; les {pct(100 - ENR_PCT)} restants sont des types non couverts par les fournisseurs ou des appels en erreur, conservés comme tels.",
+    f"Aucun faux positif n'a été observé sur les {N_DET} détections, mais seules les détections revues sont comptées : une détection non revue reste NULL.",
+    f"Le moteur de notation n'est pas le goulot d'étranglement ({fr(SPS, 0)} scores/s) : le temps est consommé par les appels réseau et la base.",
 ])
 
 h2("13.8 Figures de l'évaluation")
@@ -1637,8 +1727,8 @@ bullets([
     "Précision et rappel ne sont pas calculables : aucun jeu de vérité terrain annoté n'est disponible. Seuls des proxys mesurables sont présentés.",
     "Les faux positifs ne sont comptés que pour les détections revues ; une détection non revue reste NULL et n'est jamais comptée comme bénigne.",
     "Le backlog est isolé au lieu d'être moyenné : il mesure une indisponibilité volontaire.",
-    "Les collecteurs abuse.ch sont inactifs (clé refusée) : aucune donnée n'a été simulée pour compenser.",
-    "L'évaluation porte sur un inventaire de 174 indicateurs : elle décrit ce laboratoire, pas un SOC à l'échelle.",
+    "La collecte abuse.ch a été exécutée en réel mais sur 15 indicateurs par source : elle prouve l'intégration, pas un débit de production.",
+    f"L'évaluation porte sur un inventaire de {N_IOC} indicateurs : elle décrit ce laboratoire, pas un SOC à l'échelle.",
 ])
 
 # ========================================================= 14. PHASE 8 =====
@@ -1680,7 +1770,7 @@ para(
 figure("F21")
 callout(
     "Deux jeux de données distincts",
-    "L'inventaire local (174 IOC) et l'inventaire EC2 (94 IOC) sont deux bases séparées, alimentées "
+    f"L'inventaire local ({N_IOC} IOC) et l'inventaire EC2 (94 IOC) sont deux bases séparées, alimentées "
     "à des moments différents. Ils ne doivent être ni additionnés ni confondus : le rapport "
     "d'évaluation porte sur la base locale, la démonstration AWS sur l'instance.",
 )
@@ -1699,7 +1789,7 @@ table(
         ["docs/INSTALLATION.md", "prérequis, variables, migrations, profils, dépannage", "exploitant"],
         ["docs/WORKFLOWS.md", "8 workflows, fréquences, routes, ID, reprise", "orchestrateur"],
         ["docs/SECURITY.md", "modèle de menace, contrôles, preuves, risques résiduels", "jury, RSSI"],
-        ["docs/TESTING.md", "177 tests, répartition, zones non couvertes", "développeur"],
+        ["docs/TESTING.md", f"{TEST_COUNT} tests, répartition, zones non couvertes", "développeur"],
         ["docs/USER_GUIDE.md", "dashboard et API côté utilisateur", "analyste"],
         ["docs/ARCHITECTURE.md", "conception, modèle, choix techniques", "développeur"],
         ["docs/AWS_DEPLOYMENT.md", "déploiement, coûts, tunnel, durcissement, procédures", "exploitant"],
@@ -1723,7 +1813,7 @@ code([
 para(
     "Un relecteur pressé peut, en dix minutes : lire le README, ouvrir le dashboard, consulter la "
     "fiche d'un IOC et son détail de score, vérifier le journal d'audit, puis lancer pytest pour "
-    "constater les 177 tests au vert."
+    f"constater les {TEST_COUNT} tests au vert."
 )
 
 # ========================================================== 16. SECURITE ===
@@ -1798,26 +1888,27 @@ para(
 # ============================================================= 17. TESTS ===
 h1("17. Tests")
 para(
-    "La suite compte 177 tests, exécutés sur un PostgreSQL réel (base soar_ioc_test migrée par "
+    f"La suite compte {TEST_COUNT} tests, exécutés sur un PostgreSQL réel (base soar_ioc_test migrée par "
     "Alembic), et non sur SQLite. Ce choix a un coût — les tests sont plus lents — et un bénéfice : "
     "les contraintes, les types énumérés et le trigger d'audit sont réellement éprouvés."
 )
 
 h2("17.1 Répartition")
 table(
-    "Les 177 tests par module.",
+    f"Les {TEST_COUNT} tests par module.",
     ["Module", "Tests", "Ce qu'il couvre"],
     [
         ["test_normalization.py", "35", "formes canoniques, rejets, empreintes"],
         ["test_security.py", "27", "audit immuable, entrées hostiles, sauts d'état, anti-collusion, secrets, ports"],
         ["test_lifecycle.py", "23", "transitions légales et illégales, états terminaux"],
-        ["test_ingest.py", "21", "pipeline réel : dédup, rejets, audit, provenance"],
+        ["test_ingest.py", "22", "pipeline réel : dédup, rejets, audit, provenance, compteur par source"],
         ["test_scoring.py", "19", "explicabilité, décroissance, anti-collusion, décisions"],
         ["test_misp.py", "18", "client simulé, relecture, refus de retrait non confirmé"],
         ["test_providers.py", "16", "OTX et AbuseIPDB hors ligne, cas non applicables"],
+        ["test_abusech.py", "14", "URLhaus/ThreatFox/MalwareBazaar hors ligne : GET vs POST, clé refusée, parsing"],
         ["test_pipeline.py", "11", "chemin complet, expiration, résilience"],
         ["test_health.py", "7", "sondes, configuration, logs JSON"],
-        ["Total", "177", "177 passed, 0 échec (~42 s)"],
+        ["Total", f"{TEST_COUNT}", f"{TEST_COUNT} passed, 0 échec (~38 s)"],
     ],
     widths=[4.8, 1.8, 10.0],
     source="pytest --collect-only et docs/TESTING.md.",
@@ -1844,9 +1935,9 @@ table(
     ["Zone", "Raison", "Conséquence"],
     [
         ["Interface React", "pas de tests unitaires frontend", "validation par build et parcours manuel"],
-        ["Charge et montée en charge", "laboratoire mono-poste", "débit mesuré sur 65 IOC seulement"],
+        ["Charge et montée en charge", "laboratoire mono-poste", f"débit mesuré sur {N_HOT} IOC seulement"],
         ["MISP réel", "serveur non déployé", "client testé contre un transport simulé"],
-        ["abuse.ch", "clé refusée par le serveur", "collecteurs présents mais inactifs"],
+        ["abuse.ch", "pas de suivi continu", "trois collecteurs exercés en réel sur 15 IOC par source"],
         ["Test d'intrusion", "hors périmètre du laboratoire", "contrôles vérifiés, pas éprouvés adversarialement"],
         ["CI", "contrainte du laboratoire", "exécution locale documentée"],
     ],
@@ -1871,14 +1962,14 @@ table(
     ["Limite", "Effet", "Réponse"],
     [
         ["Pas de vérité terrain annotée", "précision et rappel non calculables", "proxys mesurés explicitement nommés"],
-        ["Clé abuse.ch refusée", "URLhaus, ThreatFox et MalwareBazaar inactifs", "aucune donnée simulée en compensation"],
+        ["Clé abuse.ch absente ou révoquée", "URLhaus, ThreatFox et MalwareBazaar indisponibles", "collecteurs testés hors ligne, échec explicite sans donnée simulée"],
         ["MISP non déployé", "pas de publication externe réelle", "client complet, 18 tests, réponse skipped"],
         ["API sans authentification", "inutilisable en multi-utilisateur", "loopback uniquement, limite documentée"],
         ["Pas de tests frontend", "régressions visuelles possibles", "build strict et parcours manuel des 13 routes"],
         ["Pas de CI", "exécution manuelle des tests", "procédure documentée et reproductible"],
         ["Backlog de 109 IOC", "latence globale faussée", "isolé et exclu de la latence à chaud"],
         ["IP administrateur dynamique", "SSH refusé si l'IP change", "procédure de mise à jour, console en secours"],
-        ["Deux inventaires séparés", "risque de confusion 174 / 94", "distinction explicite dans le rapport"],
+        ["Deux inventaires séparés", f"risque de confusion {N_IOC} / 94", "distinction explicite dans le rapport"],
         ["Mono-nœud", "pas de haute disponibilité", "assumé pour un laboratoire"],
     ],
     widths=[5.0, 5.6, 6.0],
@@ -1887,7 +1978,7 @@ table(
 
 h2("18.2 Perspectives")
 bullets([
-    "Régénérer une clé abuse.ch pour activer trois collecteurs déjà codés.",
+    "Étendre la collecte abuse.ch à un suivi permanent (pagination, planification, quotas).",
     "Déployer un serveur MISP et dérouler le cycle publication / révocation de bout en bout.",
     "Ajouter une authentification (jeton ou OIDC) avant tout usage partagé.",
     "Constituer un jeu de vérité terrain annoté pour mesurer précision et rappel.",
@@ -1900,7 +1991,7 @@ h1("19. Bilan")
 para(
     "Le projet livre une usine à indicateurs complète, exécutable et vérifiable. Les dix étapes du "
     "cycle de vie sont implémentées, automatisées par huit workflows, exposées par 25 routes et "
-    "rendues lisibles par un tableau de bord de treize pages. Les 177 tests s'exécutent sur un "
+    f"rendues lisibles par un tableau de bord de treize pages. Les {TEST_COUNT} tests s'exécutent sur un "
     "PostgreSQL réel, et l'évaluation est une lecture de la base, non un commentaire."
 )
 para("Ce qui distingue le projet, en trois points :", bold=True, space_after=2)
@@ -1911,7 +2002,7 @@ numbered([
 ])
 para(
     "Les limites sont réelles et énoncées : pas de précision ni de rappel sans vérité terrain, pas "
-    "de serveur MISP, pas de collecteurs abuse.ch actifs, pas de tests frontend ni de CI. Elles "
+    "de serveur MISP, pas de suivi abuse.ch permanent, pas de tests frontend ni de CI. Elles "
     "dessinent les prochains travaux, sans invalider ce qui est démontré."
 )
 para(
@@ -2024,7 +2115,7 @@ code([
 # ============================================================ ANNEXE D =====
 h1("Annexe D — Inventaire des illustrations")
 table(
-    "Fichiers sources des vingt-deux figures.",
+    f"Fichiers sources des {len(FIG_SPEC)} figures.",
     ["N°", "Fichier", "Dossier", "Poids"],
     [[str(pos), path.name, path.parent.name + "/", f"{max(1, round(path.stat().st_size / 1024))} Ko"]
      for pos, (_key, path, _caption, _width) in enumerate(FIG_SPEC, start=1)],
