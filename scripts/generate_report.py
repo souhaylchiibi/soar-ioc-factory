@@ -354,6 +354,7 @@ table(["Vérification", "Résultat"], [
     ["Ressources", "1 instance existante réutilisée — 0 création, 0 $ supplémentaires"],
     ["Ports écoutés", "127.0.0.1:80 / :8000 / :5678 ; PostgreSQL aucun port publié"],
     ["Règles security group", "aucune règle 80/8000/5432/5678 → exposition impossible"],
+    ["Durcissement SSH", "tcp/22 restreint à l'IP de l'administrateur (/32) — 0.0.0.0/0 retirée le 14/11, prouvé par relecture AWS CLI"],
     ["Self-test depuis l'instance", "IP publique:80 → timeout (filtré)"],
     ["Migrations", "head dadb423768cb appliquée"],
     ["system/health", "healthy"],
@@ -572,6 +573,7 @@ para(
 h1("13. Sécurité")
 bullets([
     "Secrets : .env (clés API) et *.pem exclus du Git (vérifié par git check-ignore à chaque commit).",
+    "SSH restreint à l'IP de l'administrateur (/32) sur le security group de l'instance ; la règle 0.0.0.0/0 a été retirée le 14/11/2026 après vérification de la nouvelle règle.",
     "Journal d'audit strictement append-only : trigger PostgreSQL forbid_audit_mutation (UPDATE/DELETE refusés), testé.",
     "PostgreSQL jamais exposé : aucun port publié sur le déploiement AWS, binding 127.0.0.1 en local.",
     "Exposition AWS : aucun port public, accès démonstration par tunnel SSH chiffré.",
@@ -594,7 +596,8 @@ table(["Sujet", "État", "Suite prévue"], [
     ["Instance EC2",
      "Arrêtée hors session (coût maîtrisé)", "Redémarrage documenté (docs/AWS_DEPLOYMENT.md)"],
     ["Durcissement SSH (SG /32)",
-     "Non appliqué (validation requise)", "Basculer sur le SG default (IP unique)"],
+     "Appliqué le 14/11/2026 (0.0.0.0/0 retirée)",
+     "IP administrateur dynamique : mettre à jour la règle si elle change"],
     ["Authentification de l'API",
      "Absente (laboratoire mono-utilisateur, 127.0.0.1)", "OAuth2/JWT avant tout usage multi-utilisateur"],
 ])

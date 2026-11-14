@@ -199,6 +199,9 @@ capture/            14 captures d'écran
 
 - **Aucun port exposé publiquement** : toutes les publications Docker sont sur
   `127.0.0.1` ; sur EC2, accès **uniquement par tunnel SSH** (vérifié 4 façons).
+- **SSH restreint à l'IP de l'administrateur** (`/32`) depuis le 14/11/2026 ; la
+  règle `0.0.0.0/0` du security group a été retirée après vérification
+  (`docs/AWS_DEPLOYMENT.md` §2.2).
 - **Secrets hors du dépôt** : `.env`, `*.pem`, clés AWS ignorés par git ;
   test automatisé qui vérifie qu'aucun secret n'est suivi.
 - **Journal d'audit append-only** : trigger PostgreSQL qui refuse UPDATE/DELETE.

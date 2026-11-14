@@ -173,25 +173,21 @@ Total : **177 tests**, exécutés contre un **vrai PostgreSQL**
 
 | Élément | État |
 |---|---|
-| Security group de l'instance | `launch-wizard-1` — SSH encore ouvert à `0.0.0.0/0` ; restriction à l'IP de l'administrateur **décidée le 14/11** (procédure prête, application en attente d'une session AWS valide) |
+| Security group de l'instance | `launch-wizard-1` — SSH restreint à `[masqué : IP administrateur]/32` depuis le **14/11/2026** (règle `[masqué : ID règle SG]`) ; `0.0.0.0/0` retirée. IP administrateur **dynamique** : à mettre à jour si elle change |
 | Ports applicatifs | **aucun** ouvert dans le security group |
 | Accès dashboard | tunnel SSH `-L 8091:127.0.0.1:80` |
 | Bases de données | jamais publiées sur l'hôte EC2 |
 | Coût | instance `stopped` hors session |
 
-⚠️ **Risque résiduel actuel** : SSH est joignable depuis Internet et repose
-uniquement sur l'authentification par clé. Durcissement **décidé le 14/11/2026** :
+✅ **Durci le 14/11/2026.** SSH n'accepte plus que `[masqué : IP administrateur]/32` sur
+`[masqué : ID security group]` (`[masqué : ID règle SG]`) ; la règle `0.0.0.0/0` a été
+retirée après vérification. Preuves (commandes, relecture, tests) :
+[`AWS_DEPLOYMENT.md`](AWS_DEPLOYMENT.md) §2.2.
 
-```text
-SG launch-wizard-1 ([masqué : ID security group]) :
-  0.0.0.0/0  ->  <IP publique de l'administrateur>/32
-```
-
-Procédure exacte, vérification et retour arrière :
-[`AWS_DEPLOYMENT.md`](AWS_DEPLOYMENT.md) §2.2. **Pas encore appliquée** : les
-identifiants AWS Academy du 07/11 ont expiré (`InvalidClientTokenId`) et aucune
-commande AWS n'a été exécutée depuis. L'opération ne nécessite pas que l'instance
-soit démarrée.
+⚠️ **Risque résiduel** : l'IP de l'administrateur est dynamique. Si elle change,
+l'SSH est refusé jusqu'à mise à jour de la règle — c'est le comportement attendu
+d'un filtrage par IP. La console EC2 (Instance Connect / Session Manager) reste
+un recours indépendant.
 
 Autres recommandations non appliquées : `fail2ban`, désactivation de
 `PasswordAuthentication`, MFA sur le compte AWS Academy.

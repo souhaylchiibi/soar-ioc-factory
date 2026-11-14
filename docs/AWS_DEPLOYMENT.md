@@ -11,7 +11,7 @@
 |---|---|
 | Instance | `[masqué : ID instance EC2]` — nom **SOAR-IOC-SERVER** (existante, réutilisée) |
 | Type / OS | **t2.large** (2 vCPU, 8 Go) · Ubuntu 24.04.5 LTS · us-east-1 |
-| IP publique | `13.217.103.186` (SSH uniquement) |
+| IP publique | `[masqué : IP publique EC2]` au 14/11/2026 (change à chaque `start` — SSH uniquement) |
 | Clé | `soar-ioc-key.pem` (locale, **jamais copiée sur le serveur**) |
 | Disque | 40 Go gp3 (`[masqué : ID volume EBS]`) |
 | Stack | Docker 29.9.3 + Compose v5.7 → `postgres`, `api`, `n8n`, `frontend` |
@@ -33,64 +33,61 @@ iptables DOCKER : -A DOCKER -d 127.0.0.1/32 --dport 80 -j DNAT ...  (ne matche Q
 Self-test EC2 → son IP publique:80 = TIMEOUT (SG filtre)
 ```
 
-Règles security group en place au 07/11/2026 (**état historique, à corriger — voir §2.2**) :
+Règles security group (état **après durcissement du 14/11/2026**) :
 
 | SG | Règles |
 |---|---|
-| `[masqué : ID security group]` (launch-wizard-1, **attaché à l'instance**) | tcp/22 depuis `0.0.0.0/0` |
-| `[masqué : ID security group par défaut]` (default) | tcp/22 depuis `[masqué : ancienne IP administrateur]/32` (= IP publique de l'étudiant) |
+| `[masqué : ID security group]` (launch-wizard-1, **attaché à l'instance**) | tcp/22 depuis `[masqué : IP administrateur]/32` uniquement — règle `[masqué : ID règle SG]` ; `0.0.0.0/0` **retirée** (`[masqué : ID règle SG]`) |
+| `[masqué : ID security group par défaut]` (default) | tcp/22 depuis `[masqué : ancienne IP administrateur]/32` (ancienne IP de l'étudiant, 07/11) |
 
 - **Ports 80/8000/5432/5678 : aucune règle → impossible d'y accéder de l'extérieur.**
 - ⚠️ Relevé : `Test-NetConnection` local a signalé un faux « port80 ouvert » ; le test
   TCP brut depuis le poste et le self-test depuis l'instance prouvent le filtrage
   (méthode de vérification : `infrastructure/aws/`, scripts `tcp_scan` + `check_exposure`).
 
-### 2.2 Durcissement SSH — décision prise, application en attente
+### 2.2 Durcissement SSH — appliqué le 14/11/2026
 
-**Décision (14/11/2026)** : restreindre l'SSH à l'IP de l'administrateur, puis retirer
-l'ouverture mondiale. Le SG `launch-wizard-1` (`[masqué : ID security group]`) est celui attaché
-à l'instance ; c'est lui qu'il faut corriger.
+**Décision** : restreindre l'SSH à l'IP de l'administrateur, puis retirer l'ouverture
+mondiale. SG concerné : `launch-wizard-1` (`[masqué : ID security group]`).
 
-> ⚠️ **Non appliqué à ce jour** : les identifiants AWS Academy enregistrés le 07/11 ont
-> expiré (`InvalidClientTokenId`, jetons valables ~4 h). Aucune commande AWS n'a été
-> exécutée depuis. La procédure ci-dessous est prête et rejouable.
+**Exécution (preuves AWS CLI)** :
 
-IP publique constatée le 14/11/2026 : `[masqué : IP administrateur]` (adresse **dynamique** — la
-revérifier avant d'appliquer : <https://api.ipify.org>).
+| Étape | Résultat |
+|---|---|
+| `authorize-security-group-ingress --cidr [masqué : IP administrateur]/32` | règle `[masqué : ID règle SG]` créée |
+| Relecture du SG avant retrait | `0.0.0.0/0` **et** `[masqué : IP administrateur]/32` présents (garde-fou) |
+| `revoke-security-group-ingress --cidr 0.0.0.0/0` | règle `[masqué : ID règle SG]` supprimée |
+| Relecture finale | `tcp/22` → **uniquement** `[masqué : IP administrateur]/32` |
+| Test SSH depuis le poste | `SSH_OK` (hôte `ip-172-31-35-188`) |
+| Test TCP 80 depuis Internet | timeout (aucun port applicatif exposé) |
+
+> L'IP publique de l'étudiant est **dynamique** : elle était `[masqué : ancienne IP administrateur]` le 07/11,
+> `[masqué : IP administrateur]` le 14/11. Si elle change, l'SSH est refusé — il faut mettre à jour
+> la règle (commandes ci-dessous). C'est le prix du durcissement ; le retour arrière
+> reste possible.
+
+IP publique de l'**instance** au 14/11/2026 : `[masqué : IP publique EC2]` (elle change à chaque
+`start`, aucune Elastic IP — mettre à jour la commande `ssh` à chaque session).
 
 ```bash
 SG=[masqué : ID security group]
-IP=[masqué : IP administrateur]/32          # <-- verifier votre IP publique AVANT
+IP=$(curl -s https://api.ipify.org)/32     # votre IP publique du moment
 
-# 1. Ajouter la regle /32 (idempotent : ignorer InvalidPermission.Duplicate)
+# Mettre a jour la regle (ajouter la nouvelle IP)
 aws ec2 authorize-security-group-ingress --group-id $SG \
   --protocol tcp --port 22 --cidr $IP
 
-# 2. Verifier que la regle /32 existe bien, puis seulement retirer 0.0.0.0/0
+# Verifier, puis retirer l'ancienne IP si elle n'est plus utilisee
 aws ec2 describe-security-groups --group-ids $SG \
-  --query "SecurityGroups[0].IpPermissions[?FromPort==\`22\`]"
-
-aws ec2 revoke-security-group-ingress --group-id $SG \
-  --protocol tcp --port 22 --cidr 0.0.0.0/0
+  --query "SecurityGroups[0].IpPermissions[].IpRanges[].CidrIp" --output text
 ```
 
-Vérification finale (doit ne plus retourner que le `/32`) :
-
-```bash
-aws ec2 describe-security-groups --group-ids $SG \
-  --query "SecurityGroups[0].IpPermissions[?FromPort==\`22\`].IpRanges[].CidrIp" --output text
-```
-
-Retour arrière (si l'accès est perdu à cause d'un changement d'IP) :
+Retour arrière d'urgence (si vous perdez l'accès) :
 
 ```bash
 aws ec2 authorize-security-group-ingress --group-id $SG \
   --protocol tcp --port 22 --cidr 0.0.0.0/0
 ```
-
-> L'instance peut rester **arrêtée** pendant l'opération : une règle de SG ne nécessite
-> pas d'instance en cours d'exécution. En cas de verrouillage, la console EC2
-> (Instance Connect / session manager) reste un recours indépendant de la règle SSH.
 
 ### 2.3 Secrets
 
@@ -178,7 +175,7 @@ Détail des scripts : `infrastructure/aws/`
 ```powershell
 # Poste étudiant — un seul tunnel local, aucun port public
 ssh -i "C:\Users\T480s\Desktop\SOAR project\soar-ioc-key.pem" `
-    -N -L 8091:127.0.0.1:80 ubuntu@13.217.103.186
+    -N -L 8091:127.0.0.1:80 ubuntu@[masqué : IP publique EC2]
 ```
 
 Puis : **http://127.0.0.1:8091/** → dashboard SOC complet (13 pages).
