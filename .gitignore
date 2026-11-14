@@ -38,3 +38,6 @@ volume-data/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Word / Office lock files
+~$*
