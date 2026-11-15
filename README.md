@@ -1,5 +1,16 @@
 # SOAR IOC Factory
 
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![n8n](https://img.shields.io/badge/n8n-8_workflows-EA4B71?logo=n8n&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![AWS](https://img.shields.io/badge/AWS-EC2-FF9900?logo=amazonwebservices&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-192_passed-brightgreen)
+
+![Dashboard SOC](capture/2026-11-14/12-dashboard-general.jpg)
+
 > Usine à indicateurs de compromission : **collecter → normaliser → dédupliquer →
 > enrichir → noter → décider → publier → surveiller → expirer → retirer**,
 > avec preuve, journal d'audit et tableau de bord SOC.
@@ -134,7 +145,27 @@ Procédure détaillée (installation, AWS, fermeture, pièges connus) :
 
 ---
 
-## Captures
+## Aperçu
+
+| Inventaire des IOC | Sources de threat intelligence |
+|---|---|
+| ![Inventaire](capture/2026-11-14/13-inventaire.jpg) | ![Sources](capture/2026-11-14/13b-sources.jpg) |
+| **Score explicable** | **Fiche IOC** |
+| ![Scoring](capture/2026-11-14/14-scoring-detail.jpg) | ![Fiche IOC](capture/2026-11-14/15-ioc-detail.jpg) |
+| **Cycle de vie** | **Indicateurs publiés** |
+| ![Cycle de vie](capture/2026-11-14/16-cycle-de-vie.jpg) | ![Publiés](capture/2026-11-14/17-publies.jpg) |
+| **Détections Suricata / Wazuh** | **Workflows n8n** |
+| ![Détections](capture/2026-11-14/18-detections.jpg) | ![Workflows](capture/2026-11-14/19-workflows.jpg) |
+| **Journal d'audit append-only** | **Santé du système** |
+| ![Audit](capture/2026-11-14/20-audit.jpg) | ![Santé](capture/2026-11-14/21-system-health.jpg) |
+
+> **Publication publique** : les identifiants d'infrastructure (compte AWS,
+> instance, security groups, IP d'administration) et les données personnelles
+> ont été remplacés dans le dépôt et dans son historique par des commentaires
+> `[masqué : …]`. Les adresses IP restantes sont des **IOC issus de flux
+> publics** (données du projet), pas de l'infrastructure.
+
+### Captures par phase
 
 | # | Écran | Fichier |
 |---|---|---|
