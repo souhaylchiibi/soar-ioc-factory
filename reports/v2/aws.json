@@ -1,0 +1,45 @@
+{
+  "total_iocs": 94,
+  "by_status": {
+    "MONITORED": 73,
+    "REJECTED": 21
+  },
+  "detections": 0,
+  "users": 1,
+  "alembic": "b7e41c2a9f10",
+  "last_workflow": "2026-11-16T22:26:35.994682+00:00",
+  "containers": [
+    {
+      "name": "soar-frontend",
+      "status": "Up 4 minutes (healthy)",
+      "image": "soar-ioc-factory-frontend"
+    },
+    {
+      "name": "soar-api",
+      "status": "Up 4 minutes (healthy)",
+      "image": "soar-ioc-factory-api"
+    },
+    {
+      "name": "soar-n8n",
+      "status": "Up 4 minutes",
+      "image": "n8nio/n8n:latest"
+    },
+    {
+      "name": "soar-postgres",
+      "status": "Up 3 hours (healthy)",
+      "image": "postgres:16-alpine"
+    }
+  ],
+  "listening": [
+    "127.0.0.1:5678",
+    "127.0.0.1:80",
+    "127.0.0.1:8000"
+  ],
+  "instance": {
+    "type": "t2.large",
+    "region": "us-east-1",
+    "access": "tunnel SSH (127.0.0.1:8091 -> 127.0.0.1:80)"
+  },
+  "deployed_at": "2026-11-16T22:25:11+00:00",
+  "backup": "~/backups/soar_ioc_pre_v02_20261116.dump + dossier v0.1 conserv\u00e9"
+}

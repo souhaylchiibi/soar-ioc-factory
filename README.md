@@ -165,7 +165,10 @@ administrateur), console SOC redessinée (design system dédié, recherche
 `Ctrl K`, notifications, confirmations), Detection Center avec qualification
 des alertes, état réel des intégrations, durées d'exécution mesurées,
 durcissement (rate limiting, CSP, images non-root, dépendances corrigées).
-Détail : [`docs/LIVRAISON_V2.md`](docs/LIVRAISON_V2.md).
+Détail : [`docs/LIVRAISON_V2.md`](docs/LIVRAISON_V2.md) · rapport
+[`reports/RAPPORT_V2_SOAR_IOC_FACTORY.docx`](reports/RAPPORT_V2_SOAR_IOC_FACTORY.docx)
+(18 pages, PDF à côté) · soutenance
+[`reports/PRESENTATION_V2_SOAR_IOC_FACTORY.pptx`](reports/PRESENTATION_V2_SOAR_IOC_FACTORY.pptx) (14 diapositives).
 
 ### Console v0.1 (14/11/2026)
 
@@ -293,8 +296,8 @@ Détail et limites assumées : [`docs/SECURITY.md`](docs/SECURITY.md).
 3. **Précision / rappel** : pas de vérité terrain annotée (les IOC viennent de
    flux publics) ; seuls des proxys mesurables sont revendiqués.
 4. ~~API sans authentification~~ : **corrigé en v0.2** (JWT + rôles).
-5. **Instance AWS** : la v0.2 n'y est pas encore redéployée (procédure dans
-   `docs/LIVRAISON_V2.md` § 9).
+5. **Instance AWS** : v0.2 **déployée le 16/11/2026** (migration `b7e41c2a9f10`, 8 scénarios
+   Playwright réussis via le tunnel SSH) ; sa base (94 IOC) reste distincte de la base locale.
 
 ---
 

@@ -78,6 +78,15 @@ de provenance, scoring explicable, données synthétiques marquées.
 
 ---
 
+### Déploiement AWS (16/11/2026, 22:25 UTC)
+- Sauvegarde `pg_dump` + ancien dossier conservé, code v0.2, secrets générés sur le serveur, migration `b7e41c2a9f10`, reconstruction (4 conteneurs healthy), 8 workflows importés.
+- Vérifié : 401 sans jeton, CSP active, nginx UID 101, ports sur 127.0.0.1 uniquement, exécution n8n `success`, **Playwright 8/8 via le tunnel SSH**.
+- Surcoût : 0 $ (même instance t2.large, mêmes conteneurs).
+
+### Livrables documentaires
+- `reports/RAPPORT_V2_SOAR_IOC_FACTORY.docx` + `.pdf` (18 pages, 13 tableaux, 16 figures) — `scripts/collect_v2_facts.py` puis `scripts/build_report_v2.py`, finalisé par `scripts/word_finalize.ps1`.
+- `reports/PRESENTATION_V2_SOAR_IOC_FACTORY.pptx` + `.pdf` (14 diapositives, notes orateur) — `scripts/build_presentation_v2.js`.
+
 ## 3. Fonctionnalités partiellement terminées
 
 | Élément | État | Ce qui manque |
@@ -85,7 +94,6 @@ de provenance, scoring explicable, données synthétiques marquées.
 | Sévérité Wazuh | dérivée du niveau de règle pour les **nouvelles** ingestions | les 4 détections Wazuh historiques n'ont pas stocké le niveau → « non fournie » (pas d'estimation rétroactive) |
 | Durée des exécutions | mesurée pour toute exécution postérieure au 16/11 | les exécutions antérieures restent « non mesurée » |
 | Notifications | calculées sur 48 h, lu/non lu par poste | pas de notification push ni d'e-mail |
-| Déploiement AWS | code et compose prêts (`docker-compose.aws.yml` mis à jour) | **non redéployé** sur l'instance EC2 (action à lancer, cf. § 7) |
 
 ## 4. Impossible à finaliser faute d'accès ou de configuration
 
@@ -141,7 +149,7 @@ de provenance, scoring explicable, données synthétiques marquées.
 - `style-src 'unsafe-inline'` nécessaire aux styles inline React/Recharts (aucun script inline).
 - Un seul rôle PostgreSQL (propriétaire du schéma) pour l'API et les migrations.
 - Pas de TLS entre conteneurs (réseau bridge mono-hôte) ; accès distant uniquement par tunnel SSH.
-- Instance AWS non redéployée ; la base EC2 (94 IOC) est distincte de la base locale (217 IOC).
+- La base EC2 (94 IOC) est distincte de la base locale ; aucune synchronisation entre les deux.
 - Pas de vérité terrain : précision / rappel non calculables (inchangé, documenté).
 - 410 avertissements Ruff **de style** (annotations `Optional` au lieu de `X | None`, longueur de ligne, `Depends()` en valeur par défaut — idiome FastAPI) ; catégories erreurs/bugs (`F`, `B904`) : 21 avant → 2 après (dans `normalization.py` et `test_health.py`, non modifiés).
 

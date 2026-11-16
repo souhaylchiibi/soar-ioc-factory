@@ -10,12 +10,14 @@ import { join } from "node:path";
 const BASE = process.env.E2E_BASE_URL ?? "http://127.0.0.1:5173";
 const OUT = join(process.cwd(), "..", "capture", new Date().toISOString().slice(0, 10));
 mkdirSync(OUT, { recursive: true });
+const PREFIX = process.env.SHOT_PREFIX ?? "v2";
+const shot = (f: string) => join(OUT, f.replace(/^v2/, PREFIX));
 
 const browser = await chromium.launch({ channel: process.env.E2E_CHANNEL ?? "chrome" });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
 
 await page.goto(`${BASE}/login`);
-await page.screenshot({ path: join(OUT, "v2-01-login.png") });
+await page.screenshot({ path: shot("v2-01-login.png") });
 await page.getByLabel("Identifiant").fill(process.env.E2E_USER ?? "");
 await page.getByLabel("Mot de passe", { exact: true }).fill(process.env.E2E_PASSWORD ?? "");
 await page.getByRole("button", { name: /se connecter/i }).click();
@@ -37,7 +39,7 @@ for (const [path, file, heading] of shots) {
   await page.getByRole("heading", { level: 1, name: heading }).waitFor();
   await page.waitForLoadState("networkidle");
   await page.waitForTimeout(600);
-  await page.screenshot({ path: join(OUT, file), fullPage: path === "/" });
+  await page.screenshot({ path: shot(file), fullPage: path === "/" });
 }
 
 // IOC evidence file of the highest-scored indicator
@@ -48,7 +50,7 @@ await page.goto(`${BASE}/threat-intel?q=${encodeURIComponent(value)}`);
 await page.locator("tbody tr").first().click();
 await page.getByRole("tab", { name: /score/i }).waitFor();
 await page.waitForLoadState("networkidle");
-await page.screenshot({ path: join(OUT, "v2-05-ioc-detail.png") });
+await page.screenshot({ path: shot("v2-05-ioc-detail.png") });
 
 // Mobile overview
 const mobile = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
@@ -58,7 +60,7 @@ await mobile.getByLabel("Mot de passe", { exact: true }).fill(process.env.E2E_PA
 await mobile.getByRole("button", { name: /se connecter/i }).click();
 await mobile.getByRole("heading", { level: 1, name: "SOC Overview" }).waitFor();
 await mobile.waitForLoadState("networkidle");
-await mobile.screenshot({ path: join(OUT, "v2-12-mobile.png") });
+await mobile.screenshot({ path: shot("v2-12-mobile.png") });
 
 await browser.close();
 console.log(`screenshots written to ${OUT}`);
