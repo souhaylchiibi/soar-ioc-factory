@@ -18,5 +18,8 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    // Fonts are always emitted as files: the production CSP (font-src 'self')
+    // forbids data: URIs, so small subsets must not be inlined.
+    assetsInlineLimit: (file: string) => (/\.(woff2?|ttf|otf)$/.test(file) ? false : undefined),
   },
 })

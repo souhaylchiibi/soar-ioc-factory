@@ -9,6 +9,7 @@ Design rules:
 """
 from __future__ import annotations
 
+import time
 import uuid
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -21,27 +22,47 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.db import get_db
 from app.core.logging import get_logger
+from app.core.security import Principal, require_analyst
 from app.enrichment.otx import OtxEnrichmentProvider
 from app.enrichment.service import run_enrichment
 from app.lifecycle.machine import LifecycleError, transition
+from app.models.account import Report
 from app.models.ioc import (
     AuditLog,
     Ioc,
     IocStatus,
-    LifecycleEvent,
     Publication,
 )
-from app.models.account import Report
-from app.schemas.ioc import LifecycleEventOut
-from app.services.pipeline import expire_due_iocs, score_and_decide
+from app.services.pipeline import expire_due_iocs
 
 logger = get_logger("soar.api.operations")
 router = APIRouter(tags=["operations"])
 
 
+def _mark_source(db: Session, name: str, ok: bool, error: Optional[str] = None) -> None:
+    """Keep intel_sources.last_* in sync with the run just recorded in audit."""
+    from app.models.ioc import IntelSource
+
+    src = db.execute(select(IntelSource).where(IntelSource.name == name)).scalar_one_or_none()
+    if src is None:
+        return
+    now = datetime.now(timezone.utc)
+    if ok:
+        src.last_success_at = now
+    else:
+        src.last_error_at = now
+        src.last_error = error
+
+
+def _ms(t0: float) -> int:
+    """Elapsed wall time since t0, in milliseconds (measured, never estimated)."""
+    return int((time.perf_counter() - t0) * 1000)
+
+
 # ------------------------------------------------------------- enrichement --
 @router.post("/iocs/collect/run")
 def collect_run(
+    principal: Principal = Depends(require_analyst),
     db: Session = Depends(get_db),
     source: Optional[str] = Query(None, description="Restreindre à une source"),
     limit: int = Query(50, ge=1, le=300),
@@ -80,6 +101,7 @@ def collect_run(
                                        f"disponibles: {', '.join(catalogue)}")
         catalogue = {source: catalogue[source]}
 
+    t0 = time.perf_counter()
     per_source = []
     totals = {"created": 0, "updated": 0, "duplicates": 0, "rejected": 0, "failed": 0}
 
@@ -91,7 +113,7 @@ def collect_run(
             entry["collected"] = len(items)
             local = {"created": 0, "updated": 0, "duplicates": 0, "rejected": 0}
             for raw in items:
-                outcome = ingest_raw(db, raw, actor=f"workflow-1/{name}")
+                outcome = ingest_raw(db, raw, actor=f"{principal.actor}/{name}")
                 key = "duplicates" if outcome.action == "duplicate" else outcome.action
                 local[key] = local.get(key, 0) + 1
             entry.update(local)
@@ -99,30 +121,40 @@ def collect_run(
                 if k in local:
                     totals[k] += local[k]
             db.add(AuditLog(
-                actor=f"workflow-1/{name}", action="COLLECT", entity_type="source",
+                actor=f"{principal.actor}/{name}", action="COLLECT", entity_type="source",
                 entity_id=name, detail={"collected": len(items), **local},
                 success=True,
             ))
+            _mark_source(db, name, ok=True)
         except Exception as exc:
             # Never fake an empty success: record the failure honestly.
             entry["status"] = "failed"
             entry["error"] = str(exc)[:300]
             totals["failed"] += 1
             db.add(AuditLog(
-                actor=f"workflow-1/{name}", action="COLLECT", entity_type="source",
+                actor=f"{principal.actor}/{name}", action="COLLECT", entity_type="source",
                 entity_id=name, detail={"error": str(exc)[:300]},
                 success=False, error=str(exc)[:300],
             ))
+            _mark_source(db, name, ok=False, error=str(exc)[:300])
             logger.warning("collector failed", extra={"source": name, "action": "COLLECT"})
         per_source.append(entry)
 
+    duration = _ms(t0)
+    db.add(AuditLog(
+        actor=principal.actor, role=principal.role, action="COLLECT", entity_type="batch",
+        detail={**totals, "sources": len(per_source), "duration_ms": duration},
+        success=totals["failed"] == 0,
+        error=None if totals["failed"] == 0 else f"{totals['failed']} source(s) en échec",
+    ))
     db.commit()
-    return {"totals": totals, "sources": per_source}
+    return {"totals": totals, "sources": per_source, "duration_ms": duration}
 
 
 # ------------------------------------------------------------- enrichement --
 @router.post("/iocs/normalize/run")
 def normalize_run(
+    principal: Principal = Depends(require_analyst),
     db: Session = Depends(get_db),
     limit: int = Query(100, ge=1, le=500),
 ) -> dict[str, Any]:
@@ -136,6 +168,7 @@ def normalize_run(
     from app.collectors.base import RawIndicator
     from app.services.ingest import ingest_raw
 
+    t0 = time.perf_counter()
     stuck = db.execute(
         select(Ioc).where(Ioc.status == IocStatus.NEW).order_by(Ioc.created_at).limit(limit)
     ).scalars().all()
@@ -152,7 +185,7 @@ def normalize_run(
                     tags=list(ioc.tags or []), context=dict(ioc.context or {}),
                     is_synthetic=ioc.is_synthetic,
                 ),
-                actor="workflow-2",
+                actor=principal.actor,
             )
             if outcome.action in ("created", "updated"):
                 normalized += 1
@@ -161,7 +194,7 @@ def normalize_run(
                 # A value that no longer validates must not stay NEW.
                 ioc.status = IocStatus.REJECTED
                 db.add(AuditLog(
-                    actor="workflow-2", action="NORMALIZE", entity_type="ioc",
+                    actor=principal.actor, action="NORMALIZE", entity_type="ioc",
                     entity_id=str(ioc.id), success=False, error=outcome.reason,
                     detail={"operation": "reconciliation", "outcome": "rejected"},
                 ))
@@ -175,10 +208,10 @@ def normalize_run(
     # Verification: nothing may remain in NEW after the pass.
     remaining = db.execute(select(func.count(Ioc.id)).where(Ioc.status == IocStatus.NEW)).scalar() or 0
     db.add(AuditLog(
-        actor="workflow-2", action="NORMALIZE", entity_type="batch",
+        actor=principal.actor, action="NORMALIZE", entity_type="batch",
         detail={"found": len(stuck), "normalized": normalized,
                 "rejected": rejected, "failed": failed,
-                "remaining_new": int(remaining)},
+                "remaining_new": int(remaining), "duration_ms": _ms(t0)},
         success=failed == 0,
         error=None if failed == 0 else f"{failed} failures",
     ))
@@ -189,6 +222,7 @@ def normalize_run(
 
 @router.post("/iocs/detections/ingest")
 def ingest_sensor_alerts(
+    principal: Principal = Depends(require_analyst),
     db: Session = Depends(get_db),
     sensor: str = Query(..., pattern="^(suricata|wazuh)$"),
     path: Optional[str] = Query(None, description="Chemin du fichier eve.json/alerts.json"),
@@ -198,7 +232,8 @@ def ingest_sensor_alerts(
     Alerts whose indicator is NOT in the inventory are reported but never
     stored as IOCs (collection owns ingestion — no silent insertion).
     """
-    from app.integrations.suricata import parse_eve, trackable_value as s_val
+    from app.integrations.suricata import parse_eve
+    from app.integrations.suricata import trackable_value as s_val
     from app.integrations.wazuh import parse_alerts_json
     from app.models.ioc import Detection
 
@@ -207,7 +242,18 @@ def ingest_sensor_alerts(
         # wazuh_live = volume externe partagé avec le conteneur wazuh
         "wazuh": "/sensor/wazuh_live/alerts.json",
     }
+    t0 = time.perf_counter()
     target = Path(path or default_paths[sensor])
+    # Path traversal guard: only files under the read-only sensor mounts.
+    root = Path(settings.sensor_root).resolve()
+    try:
+        resolved = target.resolve()
+    except OSError:
+        raise HTTPException(status_code=400, detail="chemin de capteur invalide") from None
+    if resolved != root and root not in resolved.parents:
+        raise HTTPException(status_code=400,
+                            detail=f"chemin refusé : doit se trouver sous {settings.sensor_root}")
+    target = resolved
 
     if not target.exists():
         return {"sensor": sensor, "status": "no_file",
@@ -219,13 +265,16 @@ def ingest_sensor_alerts(
         candidates = [(a.timestamp, s_val(a), a.signature, str(a.sid), a.raw) for a in alerts]
     else:
         walerts = parse_alerts_json(target)
-        candidates = [(a.timestamp, a.src_ip, a.description, str(a.rule_id), {"full_log": a.full_log[:500]})
+        # Keep the evidence needed to qualify the alert later (level, text).
+        candidates = [(a.timestamp, a.src_ip, a.description, str(a.rule_id),
+                       {"full_log": a.full_log[:500], "rule": {"id": a.rule_id, "level": a.rule_level,
+                                                              "description": a.description[:200]},
+                        "timestamp": a.timestamp.isoformat()})
                       for a in walerts]
 
     matched = untracked = duplicates = 0
     seen_keys: set[tuple] = set()
     results = []
-    now = datetime.now(timezone.utc)
 
     for ts, value, signature, rule_id, raw in candidates:
         if not value:
@@ -255,12 +304,11 @@ def ingest_sensor_alerts(
                         "matched_at": ts.isoformat()})
 
     db.add(AuditLog(
-        actor=f"workflow-6/{sensor}", action="OBSERVE", entity_type="batch",
+        actor=f"{principal.actor}/{sensor}", action="OBSERVE", entity_type="batch",
         detail={"alerts": len(candidates), "matched": matched,
                 "untracked": untracked, "duplicates_skipped": duplicates,
-                "file": str(target)},
+                "file": str(target), "duration_ms": _ms(t0)},
         success=True,
-        error=None if target.exists() else "file missing",
     ))
     db.commit()
     return {"sensor": sensor, "status": "ok", "alerts": len(candidates),
@@ -297,11 +345,13 @@ def recent_detections(
 
 @router.post("/iocs/enrich/run")
 def enrich_run(
+    principal: Principal = Depends(require_analyst),
     db: Session = Depends(get_db),
     limit: int = Query(50, ge=1, le=200),
     force: bool = False,
 ) -> dict[str, Any]:
     """Workflow 3: enrich NORMALIZED IOCs through registered providers."""
+    t0 = time.perf_counter()
     targets = db.execute(
         select(Ioc)
         .where(Ioc.status == IocStatus.NORMALIZED, Ioc.is_synthetic.is_(False))
@@ -316,7 +366,7 @@ def enrich_run(
         try:
             from app.enrichment.abuseipdb import AbuseIpdbProvider
             providers.append(AbuseIpdbProvider(api_key=settings.abuseipdb_api_key))
-        except ValueError as exc:  # pragma: no cover - config guard
+        except ValueError:  # pragma: no cover - config guard
             logger.warning("abuseipdb skipped", extra={"action": "ENRICH"})
 
     enriched, failed = 0, 0
@@ -330,7 +380,7 @@ def enrich_run(
                     ioc, IocStatus.ENRICHED,
                     reason=f"enrichment: {', '.join(summary.verdicts)} "
                            f"(providers: {', '.join(r.provider for r in summary.results if r.ok)})",
-                    actor="workflow-3", triggered_by="workflow-3",
+                    actor=principal.actor, triggered_by=principal.actor,
                 )
                 db.add(tr.event)
                 enriched += 1
@@ -344,8 +394,9 @@ def enrich_run(
         })
 
     db.add(AuditLog(
-        actor="workflow-3", action="ENRICH", entity_type="batch",
-        detail={"targets": len(targets), "enriched": enriched, "with_errors": failed},
+        actor=principal.actor, action="ENRICH", entity_type="batch",
+        detail={"targets": len(targets), "enriched": enriched, "with_errors": failed,
+                "duration_ms": _ms(t0)},
         success=True, error=None if failed == 0 else f"{failed} ioc(s) with provider errors",
     ))
     db.commit()
@@ -356,6 +407,7 @@ def enrich_run(
 # ------------------------------------------------------------ publication ---
 @router.post("/iocs/publish/run")
 def publish_run(
+    principal: Principal = Depends(require_analyst),
     db: Session = Depends(get_db),
     limit: int = Query(100, ge=1, le=500),
 ) -> dict[str, Any]:
@@ -364,6 +416,7 @@ def publish_run(
     Verification: after writing, we read the publication back and only mark
     the transition `verified` if the record really exists.
     """
+    t0 = time.perf_counter()
     targets = db.execute(
         select(Ioc)
         .where(Ioc.status == IocStatus.PUBLISHED)
@@ -413,9 +466,9 @@ def publish_run(
                         "value": ioc.value, "score": ioc.score})
 
     db.add(AuditLog(
-        actor="workflow-5", action="PUBLISH", entity_type="batch",
+        actor=principal.actor, action="PUBLISH", entity_type="batch",
         detail={"candidates": len(targets), "published": published, "verified": verified,
-                "failed": failed, "target": "detection_list"},
+                "failed": failed, "target": "detection_list", "duration_ms": _ms(t0)},
         success=failed == 0, error=None if failed == 0 else f"{failed} failures",
     ))
     db.commit()
@@ -426,6 +479,7 @@ def publish_run(
 # -------------------------------------------------------------- expiration --
 @router.post("/iocs/publish/misp/run")
 def publish_misp_run(
+    principal: Principal = Depends(require_analyst),
     db: Session = Depends(get_db),
     limit: int = Query(100, ge=1, le=500),
 ) -> dict[str, Any]:
@@ -441,22 +495,30 @@ def publish_misp_run(
 
 
 @router.post("/iocs/expire/run")
-def expire_run(db: Session = Depends(get_db)) -> dict[str, Any]:
+def expire_run(principal: Principal = Depends(require_analyst), db: Session = Depends(get_db)) -> dict[str, Any]:
     """Workflow 7: mark due indicators EXPIRED (removal is separate+verified)."""
-    results = expire_due_iocs(db, actor="workflow-7")
-    db.commit()
+    t0 = time.perf_counter()
+    results = expire_due_iocs(db, actor=principal.actor)
     expired = [r for r in results if r.get("action") == "expired"]
+    errors = [r for r in results if r.get("action") == "error"]
+    db.add(AuditLog(
+        actor=principal.actor, role=principal.role, action="EXPIRE", entity_type="batch",
+        detail={"expired": len(expired), "errors": len(errors), "duration_ms": _ms(t0)},
+        success=not errors, error=None if not errors else f"{len(errors)} erreur(s)",
+    ))
+    db.commit()
     return {"expired": len(expired), "errors":
             [r for r in results if r.get("action") == "error"], "results": results}
 
 
 @router.post("/iocs/remove/run")
-def remove_run(db: Session = Depends(get_db)) -> dict[str, Any]:
+def remove_run(principal: Principal = Depends(require_analyst), db: Session = Depends(get_db)) -> dict[str, Any]:
     """Workflow 7 (second half): revoke publications, then mark REMOVED.
 
     The REMOVED status requires a *verified* revocation: we re-read every
     publication after revocation and refuse to lie if one is still active.
     """
+    t0 = time.perf_counter()
     expired = db.execute(
         select(Ioc).where(Ioc.status == IocStatus.EXPIRED)
     ).scalars().all()
@@ -506,14 +568,14 @@ def remove_run(db: Session = Depends(get_db)) -> dict[str, Any]:
             tr = transition(
                 ioc, IocStatus.REMOVED,
                 reason=f"expiry enforced; {len(pubs)} publication(s) revoked",
-                actor="workflow-7", triggered_by="workflow-7",
+                actor=principal.actor, triggered_by=principal.actor,
                 verified=True,
                 verification_detail={"revoked_publications": len(pubs),
                                      "still_active": int(still_active)},
             )
             db.add(tr.event)
             db.add(AuditLog(
-                actor="workflow-7", action="REMOVE", entity_type="ioc",
+                actor=principal.actor, action="REMOVE", entity_type="ioc",
                 entity_id=str(ioc.id),
                 detail={"value": ioc.value, "revoked": len(pubs), "verified": True},
             ))
@@ -524,6 +586,12 @@ def remove_run(db: Session = Depends(get_db)) -> dict[str, Any]:
             failed += 1
             results.append({"ioc_id": str(ioc.id), "action": "failed", "error": str(exc)})
 
+    db.add(AuditLog(
+        actor=principal.actor, role=principal.role, action="REMOVE", entity_type="batch",
+        detail={"candidates": len(expired), "removed": removed, "failed": failed,
+                "duration_ms": _ms(t0)},
+        success=failed == 0, error=None if failed == 0 else f"{failed} retrait(s) non confirmé(s)",
+    ))
     db.commit()
     return {"candidates": len(expired), "removed": removed, "failed": failed,
             "results": results}
@@ -532,10 +600,10 @@ def remove_run(db: Session = Depends(get_db)) -> dict[str, Any]:
 @router.patch("/iocs/{ioc_id}")
 def update_ioc(
     ioc_id: uuid.UUID,
+    principal: Principal = Depends(require_analyst),
     db: Session = Depends(get_db),
     expires_at: Optional[datetime] = None,
     add_tags: Optional[list[str]] = None,
-    actor: str = Query("operator", max_length=64),
 ) -> dict[str, Any]:
     """Analyst override: adjust expiry / tags. Always audited.
 
@@ -566,7 +634,7 @@ def update_ioc(
         raise HTTPException(status_code=400, detail="aucune modification fournie")
 
     db.add(AuditLog(
-        actor=actor, action="CONFIG_CHANGE", entity_type="ioc", entity_id=str(ioc.id),
+        actor=principal.actor, role=principal.role, action="CONFIG_CHANGE", entity_type="ioc", entity_id=str(ioc.id),
         detail={"operation": "override", "changes": changes},
     ))
     db.commit()
@@ -577,6 +645,7 @@ def update_ioc(
 @router.post("/iocs/{ioc_id}/detections")
 def record_detection(
     ioc_id: uuid.UUID,
+    principal: Principal = Depends(require_analyst),
     db: Session = Depends(get_db),
     sensor: str = Query(..., pattern="^(wazuh|suricata|misp|manual)$"),
     rule_id: Optional[str] = None,
@@ -601,7 +670,7 @@ def record_detection(
         ioc.false_positive_count += 1
 
     db.add(AuditLog(
-        actor=f"workflow-6/{sensor}", action="OBSERVE", entity_type="ioc",
+        actor=f"{principal.actor}/{sensor}", action="OBSERVE", entity_type="ioc",
         entity_id=str(ioc.id),
         detail={"detection_count": ioc.detection_count,
                 "false_positive": bool(is_false_positive)},
@@ -615,6 +684,7 @@ def record_detection(
 # ---------------------------------------------------------------- rapports --
 @router.post("/reports/daily")
 def generate_daily_report(
+    principal: Principal = Depends(require_analyst),
     db: Session = Depends(get_db),
     report_date: Optional[date] = None,
 ) -> dict[str, Any]:
@@ -668,7 +738,7 @@ def generate_daily_report(
         action = "created"
 
     db.add(AuditLog(
-        actor="workflow-8", action="EXPORT", entity_type="report",
+        actor=principal.actor, action="EXPORT", entity_type="report",
         entity_id=report_id, detail={"date": day.isoformat(), "action": action},
     ))
     db.commit()

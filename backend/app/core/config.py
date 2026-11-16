@@ -27,6 +27,26 @@ class Settings(BaseSettings):
     secret_key: str = "change-me-in-production"
     access_token_expire_minutes: int = 60
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    # Authentication is ON by default; AUTH_ENABLED=false is refused in production.
+    auth_enabled: bool = True
+    # Shared secret used by n8n (header X-API-Key). Empty = service access disabled.
+    service_api_key: str = ""
+    # First admin account, created at startup only if the users table is empty.
+    admin_username: str = "admin"
+    admin_email: str = "admin@soar.local"
+    admin_password: str = ""
+    # Rate limits (per client IP, per minute)
+    rate_limit_per_minute: int = 600
+    login_rate_limit_per_minute: int = 10
+    # Lock an account after N consecutive failed logins, for M minutes.
+    login_max_failures: int = 5
+    login_lockout_minutes: int = 15
+    # Only trust X-Real-IP when the API sits behind our nginx.
+    trust_proxy_headers: bool = False
+
+    # --- Sensors (read-only mounts inside the API container) ---
+    sensor_root: str = "/sensor"
+    n8n_url: str = "http://n8n:5678"
 
     # --- Database (never exposed outside the Docker network) ---
     postgres_host: str = "localhost"
@@ -49,7 +69,7 @@ class Settings(BaseSettings):
     abusech_auth_key: str = ""
     misp_url: str = ""
     misp_key: str = ""
-    misp_verify_cert: bool = False
+    misp_verify_cert: bool = True  # TLS verified by default; disable only for a lab MISP with a self-signed cert
 
     # --- Scoring policy (initial values, tunable) ---
     score_threshold_publish: int = 80
@@ -58,6 +78,21 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    def production_errors(self) -> list[str]:
+        """Configuration mistakes that must block a production start."""
+        if self.app_env != "production":
+            return []
+        errors = []
+        if self.secret_key.startswith("change-me") or len(self.secret_key) < 32:
+            errors.append("SECRET_KEY par défaut ou trop court (>= 32 caractères)")
+        if not self.auth_enabled:
+            errors.append("AUTH_ENABLED=false interdit en production")
+        if self.debug:
+            errors.append("DEBUG=true interdit en production")
+        if "*" in self.cors_origins_list:
+            errors.append("CORS_ORIGINS='*' interdit en production")
+        return errors
 
 
 @lru_cache

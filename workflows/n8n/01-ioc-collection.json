@@ -12,7 +12,7 @@
           ]
         }
       },
-      "id": "c3dba956-fe58-4fc4-99ca-c99f62734e78",
+      "id": "f374d1fe-4530-4056-b48d-14c0246a7f7c",
       "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -32,11 +32,19 @@
             {
               "name": "Accept",
               "value": "application/json"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.SOAR_SERVICE_API_KEY }}"
+            },
+            {
+              "name": "X-Actor",
+              "value": "workflow-1"
             }
           ]
         }
       },
-      "id": "a277a6fe-b25c-4e09-875d-b9abe0e08ebb",
+      "id": "7836f833-4d01-41d3-aef4-bb1584253461",
       "name": "Collect from sources",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -55,7 +63,7 @@
         "height": 160,
         "width": 340
       },
-      "id": "c9deee58-6633-4557-8576-b9c5786a26ba",
+      "id": "23a3f2c6-2166-42d0-babe-d8f7a1464685",
       "name": "Doc",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -70,7 +78,7 @@
         "height": 160,
         "width": 340
       },
-      "id": "b19912cf-905e-4a03-afb1-12cba5736d93",
+      "id": "e0e3b401-e40f-42d7-87f5-7eb8b933f746",
       "name": "On Error (collect)",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -81,7 +89,7 @@
     },
     {
       "parameters": {},
-      "id": "d86b1c15-863d-4bc1-b7e9-1c939a94a2fe",
+      "id": "8418738a-ac41-482c-a9cd-b47167de0ddb",
       "name": "Manual Trigger",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,

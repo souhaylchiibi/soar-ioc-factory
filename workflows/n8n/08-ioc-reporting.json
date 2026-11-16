@@ -16,7 +16,7 @@
           ]
         }
       },
-      "id": "080a1a64-8cd2-4c77-a12c-c8f5122f4c9e",
+      "id": "8987575f-09c9-49e5-a029-8beb9fccebe9",
       "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -36,11 +36,19 @@
             {
               "name": "Accept",
               "value": "application/json"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.SOAR_SERVICE_API_KEY }}"
+            },
+            {
+              "name": "X-Actor",
+              "value": "workflow-8"
             }
           ]
         }
       },
-      "id": "7225f388-2e80-496e-ae58-1103ba73d2ac",
+      "id": "294da2e7-1aa1-4c53-a7a2-043252b7e05a",
       "name": "Generate daily report",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -59,7 +67,7 @@
         "height": 160,
         "width": 340
       },
-      "id": "6c3df557-c586-40bc-8318-f2d680b203dd",
+      "id": "9afccd5e-8521-4476-ac0f-0778573c2a57",
       "name": "Doc",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -74,7 +82,7 @@
         "height": 160,
         "width": 340
       },
-      "id": "5626d224-9462-4195-a634-cdc03b386783",
+      "id": "e812c0eb-b766-4315-afab-2a2b6504d2db",
       "name": "On Error",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -85,7 +93,7 @@
     },
     {
       "parameters": {},
-      "id": "edcfb5a0-ff18-4a0d-97a3-a3ad0ed8ad75",
+      "id": "dcc40dd5-1e71-40ed-a820-88b28b11d16a",
       "name": "Manual Trigger",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,

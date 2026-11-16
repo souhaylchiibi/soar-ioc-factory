@@ -12,7 +12,7 @@
           ]
         }
       },
-      "id": "8022031b-e61d-4907-a812-e129e48d9398",
+      "id": "cd912139-78d4-403a-a90d-65d23a72bce2",
       "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -32,11 +32,19 @@
             {
               "name": "Accept",
               "value": "application/json"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.SOAR_SERVICE_API_KEY }}"
+            },
+            {
+              "name": "X-Actor",
+              "value": "workflow-3"
             }
           ]
         }
       },
-      "id": "758ea53a-9b26-46dd-bc32-aa8e03379632",
+      "id": "1d173506-45fa-4709-81f6-f7a3b44c468c",
       "name": "Enrich via OTX",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -55,7 +63,7 @@
         "height": 160,
         "width": 340
       },
-      "id": "e9a9ecd0-2e5c-4696-aac5-a6706b486427",
+      "id": "c4907fe4-8d10-4d07-a1dc-4d705ae77e33",
       "name": "Doc",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -70,7 +78,7 @@
         "height": 160,
         "width": 340
       },
-      "id": "2252d170-d4c1-4721-8689-633d76bc1fd9",
+      "id": "857921f4-c5c8-4145-89cb-b220fbc10157",
       "name": "On Error",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -81,7 +89,7 @@
     },
     {
       "parameters": {},
-      "id": "e3e3f95f-79bb-4952-b4be-f43c0181a3e1",
+      "id": "ecefd38f-ede1-4c20-ae84-e315ae9f47e3",
       "name": "Manual Trigger",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,

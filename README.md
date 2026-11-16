@@ -7,9 +7,11 @@
 ![n8n](https://img.shields.io/badge/n8n-8_workflows-EA4B71?logo=n8n&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 ![AWS](https://img.shields.io/badge/AWS-EC2-FF9900?logo=amazonwebservices&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-192_passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-224_backend_%2B_31_frontend-brightgreen)
+![Auth](https://img.shields.io/badge/auth-JWT_%2B_RBAC-2cc2a6)
+![Security](https://img.shields.io/badge/Trivy%20%C2%B7%20pip--audit%20%C2%B7%20ZAP-0_open_finding-brightgreen)
 
-![Dashboard SOC](capture/2026-11-14/12-dashboard-general.jpg)
+![Console SOC v0.2](capture/2026-11-16/v2-02-overview.png)
 
 > Usine à indicateurs de compromission : **collecter → normaliser → dédupliquer →
 > enrichir → noter → décider → publier → surveiller → expirer → retirer**,
@@ -56,7 +58,7 @@ Source de vérité : [`reports/evaluation/metrics.json`](reports/evaluation/metr
 | Détections rapprochées | **16** (Suricata 2, Wazuh 4, manuel 10) |
 | Latence à chaud (ingestion → score) | **81,8 s** par lot, **1,32 IOC/s** |
 | Réduction du temps de traitement | **×12,5** (modèle manuel explicite, voir limites) |
-| Tests automatisés | **192** (dont 27 de sécurité) |
+| Tests automatisés | **192** (dont 27 de sécurité) — au 16/11 : **224** backend + **31** frontend (23 Vitest, 8 Playwright) |
 
 > Le facteur ×12,5 compare la plateforme mesurée à un **modèle manuel posé
 > comme hypothèse** (17 min/IOC), pas à un historique réel. L'hypothèse est
@@ -127,17 +129,20 @@ docker compose --profile n8n up -d
 Invoke-RestMethod http://127.0.0.1:8000/health
 Invoke-RestMethod http://127.0.0.1:8000/api/v1/system/health
 
-# 3. Tableau de bord
+# 3. Console SOC
 cd frontend
 npm install      # une seule fois
-npm run dev      # -> http://127.0.0.1:5173/
+npm run dev      # -> http://127.0.0.1:5173/login
 ```
+
+Connexion avec le compte administrateur défini dans `.env`
+(`ADMIN_USERNAME` / `ADMIN_PASSWORD`, créé au premier démarrage).
 
 | Accès | URL |
 |---|---|
-| Dashboard SOC (13 pages) | <http://127.0.0.1:5173/> |
-| API + Swagger | <http://127.0.0.1:8000/docs> |
-| n8n (8 workflows) | <http://127.0.0.1:5678> |
+| Console SOC (13 pages, authentifiée) | <http://127.0.0.1:5173/> |
+| API + Swagger (désactivé en production) | <http://127.0.0.1:8000/docs> |
+| n8n (8 workflows, clé de service) | <http://127.0.0.1:5678> |
 
 Procédure détaillée (installation, AWS, fermeture, pièges connus) :
 [`OUVRIR_LE_PROJET.md`](OUVRIR_LE_PROJET.md) et
@@ -145,7 +150,24 @@ Procédure détaillée (installation, AWS, fermeture, pièges connus) :
 
 ---
 
-## Aperçu
+## Aperçu — console v0.2 (16/11/2026)
+
+| Detection Center | Dossier de preuve d'un IOC |
+|---|---|
+| ![Detection Center](capture/2026-11-16/v2-03-detection-center.png) | ![Dossier IOC](capture/2026-11-16/v2-05-ioc-detail.png) |
+| **IOC Lifecycle (10 étapes prouvées)** | **Sources : état réel et historique** |
+| ![Cycle de vie](capture/2026-11-16/v2-06-lifecycle.png) | ![Sources](capture/2026-11-16/v2-08-sources.png) |
+| **Automation Center** | **System Health** |
+| ![Automation](capture/2026-11-16/v2-09-automation.png) | ![Santé](capture/2026-11-16/v2-11-system-health.png) |
+
+Nouveautés v0.2 : authentification JWT + rôles (lecteur / analyste /
+administrateur), console SOC redessinée (design system dédié, recherche
+`Ctrl K`, notifications, confirmations), Detection Center avec qualification
+des alertes, état réel des intégrations, durées d'exécution mesurées,
+durcissement (rate limiting, CSP, images non-root, dépendances corrigées).
+Détail : [`docs/LIVRAISON_V2.md`](docs/LIVRAISON_V2.md).
+
+### Console v0.1 (14/11/2026)
 
 | Inventaire des IOC | Sources de threat intelligence |
 |---|---|
@@ -195,8 +217,11 @@ Procédure détaillée (installation, AWS, fermeture, pièges connus) :
 | [`docs/INSTALLATION.md`](docs/INSTALLATION.md) | Installation reproductible, configuration, dépannage |
 | [`docs/WORKFLOWS.md`](docs/WORKFLOWS.md) | Les 8 workflows n8n, import, exécution, vérification |
 | [`docs/SECURITY.md`](docs/SECURITY.md) | Modèle de menace, contrôles, preuves, limites |
-| [`docs/TESTING.md`](docs/TESTING.md) | Stratégie de test, 192 tests, ce qui n'est pas couvert |
-| [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) | Utilisation du dashboard et de l'API |
+| [`docs/TESTING.md`](docs/TESTING.md) | Stratégie de test : 224 tests backend, 23 Vitest, 8 Playwright |
+| [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) | Utilisation de la console SOC (rôles, pages, états) |
+| [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md) | Direction artistique, jetons, composants, accessibilité |
+| [`docs/LIVRAISON_V2.md`](docs/LIVRAISON_V2.md) | Livraison v0.2 : diagnostic, fonctionnalités, tests exécutés, limites |
+| [`docs/architecture/GRAPH_REPORT.md`](docs/architecture/GRAPH_REPORT.md) | Carte du code (graphify) : 827 nœuds, aucune dépendance circulaire |
 | [`docs/AWS_DEPLOYMENT.md`](docs/AWS_DEPLOYMENT.md) | Déploiement EC2, coûts, accès par tunnel |
 | [`docs/PHASE0_AUDIT.md`](docs/PHASE0_AUDIT.md) | Audit initial de l'environnement |
 | [`reports/evaluation/EVALUATION.md`](reports/evaluation/EVALUATION.md) | Évaluation Phase 7 (métriques + graphiques) |
@@ -208,7 +233,7 @@ Procédure détaillée (installation, AWS, fermeture, pièges connus) :
 ## Structure du dépôt
 
 ```
-backend/            API FastAPI, moteur, tests (192)
+backend/            API FastAPI, moteur, tests (224)
   app/api/          25 routes REST
   app/services/     ingestion, normalisation, pipeline, MISP
   app/scoring/      moteur de notation explicable
@@ -245,6 +270,13 @@ capture/            14 captures d'écran
   qu'après relecture ; une révocation n'est acceptée qu'après confirmation.
 - **Aucune infrastructure réelle bloquée** : les IOC sont publiés vers une liste
   de détection de laboratoire, jamais vers un pare-feu de production.
+- **Authentification et rôles (v0.2)** : JWT + Argon2id, lecteur / analyste /
+  administrateur, verrouillage après 5 échecs, clé de service pour n8n,
+  acteur d'audit toujours issu du jeton.
+- **Durcissement (v0.2)** : rate limiting, CSP stricte, en-têtes de sécurité,
+  images non-root, garde de configuration en production ; Bandit, pip-audit,
+  npm audit, Trivy et OWASP ZAP exécutés — 0 finding ouvert
+  (`docs/SECURITY.md` § 7 bis).
 
 Détail et limites assumées : [`docs/SECURITY.md`](docs/SECURITY.md).
 
@@ -260,8 +292,9 @@ Détail et limites assumées : [`docs/SECURITY.md`](docs/SECURITY.md).
    `skipped` tant que `MISP_URL` / `MISP_KEY` sont absents.
 3. **Précision / rappel** : pas de vérité terrain annotée (les IOC viennent de
    flux publics) ; seuls des proxys mesurables sont revendiqués.
-4. **API sans authentification** : assumé pour un laboratoire fermé sur
-   `127.0.0.1` ; à ajouter avant tout usage multi-utilisateur.
+4. ~~API sans authentification~~ : **corrigé en v0.2** (JWT + rôles).
+5. **Instance AWS** : la v0.2 n'y est pas encore redéployée (procédure dans
+   `docs/LIVRAISON_V2.md` § 9).
 
 ---
 
@@ -280,7 +313,7 @@ Détail et limites assumées : [`docs/SECURITY.md`](docs/SECURITY.md).
 # Procédure de démarrage en Word
 .\backend\.venv\Scripts\python.exe scripts\md_to_docx.py OUVRIR_LE_PROJET.md "reports\PROCEDURE_OUVRIR_LE_PROJET.docx"
 
-# Tests (192)
+# Tests backend (224) — frontend : cd frontend; npm test; npm run test:e2e
 cd backend
 $env:PYTHONPATH="$PWD"; $env:POSTGRES_HOST="127.0.0.1"; $env:POSTGRES_USER="soar"
 $env:POSTGRES_PASSWORD=(Select-String -Path ..\.env -Pattern '^POSTGRES_PASSWORD=(.+)$').Matches[0].Groups[1].Value

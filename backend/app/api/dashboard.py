@@ -9,13 +9,13 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.db import check_database, get_db
-from app.models.ioc import AuditLog, Ioc, IocStatus, LifecycleEvent, Publication, SourceKind, IntelSource
+from app.models.ioc import AuditLog, Ioc, IntelSource
 
 router = APIRouter(tags=["dashboard"])
 

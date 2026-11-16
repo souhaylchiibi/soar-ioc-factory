@@ -18,7 +18,7 @@ services:
     container_name: soar-frontend
     restart: unless-stopped
     ports:
-      - "127.0.0.1:80:80"     # SSH tunnel target ONLY (never public)
+      - "127.0.0.1:80:8080"   # SSH tunnel target ONLY (never public); nginx runs non-root on 8080
     networks: [soar-net]
     depends_on:
       api:
@@ -26,6 +26,11 @@ services:
     deploy:
       resources:
         limits: { memory: 128M }
+
+  # Behind nginx: trust X-Real-IP so audit/rate limiting see the real client.
+  api:
+    environment:
+      TRUST_PROXY_HEADERS: "true"
 
   # PostgreSQL: remove the host port entirely on the server (internal only).
   db:

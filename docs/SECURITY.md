@@ -145,6 +145,43 @@ Sauter une étape (`NEW → PUBLISHED`) ou ressusciter un `REMOVED` lève
 - Volumes sondes montés en **lecture seule** (`:ro`).
 - Limites mémoire par service (`deploy.resources.limits`).
 - `restart: unless-stopped` : pas de redémarrage après arrêt volontaire.
+- Image backend : mises à jour de sécurité Debian appliquées au build et
+  outils d'empaquetage (pip, setuptools, wheel) **supprimés** de l'image finale
+  (Trivy : 0 vulnérabilité HIGH/CRITICAL corrigeable).
+- Image frontend : `nginx-unprivileged` (UID 101, port interne 8080) — Trivy
+  DS-0002 corrigé.
+
+### 4.9 Authentification et autorisations (v0.2)
+
+| Contrôle | Implémentation | Preuve |
+|---|---|---|
+| Mots de passe | Argon2id (`argon2-cffi`), politique ≥ 12 caractères / 3 classes | `app/core/security.py`, `test_auth_api.py::test_password_policy` |
+| Jetons | JWT HS256 signé par `SECRET_KEY`, expiration 60 min, `exp`/`sub` obligatoires | `test_tampered_token_rejected` |
+| Révocation immédiate | le compte est relu à chaque requête : désactivation / changement de rôle effectifs sans attendre l'expiration | `test_disabled_account_token_is_rejected_immediately` |
+| Rôles | `viewer` < `analyst` < `admin` ; lectures = viewer, opérations = analyst, comptes = admin | `TestAuthorization` |
+| Identité tracée | l'acteur d'audit vient du jeton, jamais du corps de requête (l'ancien champ `actor` est ignoré) | `test_analyst_transition_uses_token_identity_not_body` |
+| Automatisation | n8n s'authentifie par `X-API-Key` (comparaison à temps constant) ; libellé `X-Actor` filtré et préfixé (`service/…` sauf `workflow-N`) | `TestServiceKey` |
+| Énumération | message unique « Identifiants invalides », coût Argon2 identique pour un compte inexistant | `test_bad_password_is_generic_and_audited` |
+| Force brute | verrouillage du compte après 5 échecs (15 min) + 10 tentatives/min/IP sur `/auth/login` | `test_lockout_after_repeated_failures`, `test_login_rate_limited` |
+| Dernier admin | impossible de se rétrograder/désactiver soi-même ou de retirer le dernier admin actif | `test_last_admin_cannot_demote_itself` |
+| Erreurs | 422 sans écho des valeurs soumises (aucun mot de passe renvoyé) ; 500 sans pile | `test_validation_errors_never_echo_password` |
+| Démarrage sûr | en `production`, refus de démarrer si `SECRET_KEY` faible, `AUTH_ENABLED=false`, `DEBUG=true` ou CORS `*` ; Swagger désactivé | `test_production_config_guard` |
+
+### 4.10 Durcissement HTTP (v0.2)
+
+- **Rate limiting** applicatif : 600 req/min/IP sur `/api`, 10/min sur le login
+  (`app/core/middleware.py`, limiteur par processus — à porter dans le reverse
+  proxy si plusieurs workers).
+- **En-têtes** API : `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`,
+  `Permissions-Policy`, `Cache-Control: no-store`.
+- **nginx** (production) : CSP stricte (`default-src 'self'`, `frame-ancestors
+  'none'`, `object-src 'none'`), `server_tokens off`, fichiers cachés refusés.
+  Polices embarquées et jamais inlinées en `data:` pour respecter `font-src 'self'`.
+- **CORS** : origines explicites, méthodes `GET/POST/PATCH`, en-têtes listés,
+  pas de cookies (`allow_credentials=False`).
+- **Traversée de chemin** corrigée : `POST /iocs/detections/ingest?path=` ne lit
+  plus qu'à l'intérieur de `SENSOR_ROOT` (`test_sensor_path_traversal_refused`).
+- **MISP** : vérification TLS activée par défaut (`MISP_VERIFY_CERT=true`).
 
 ---
 
@@ -199,8 +236,12 @@ Autres recommandations non appliquées : `fail2ban`, désactivation de
 
 | Limite | Impact | Décision |
 |---|---|---|
-| **API sans authentification** | toute personne ayant accès au port local peut écrire | acceptable en laboratoire mono-utilisateur (`127.0.0.1`) ; à corriger avant multi-utilisateur |
-| **Pas de rate-limiting** | un appel en boucle peut saturer le CPU local | non prioritaire sans exposition réseau |
+| ~~API sans authentification~~ | — | **corrigé en v0.2** (§ 4.9) |
+| ~~Pas de rate-limiting~~ | — | **corrigé en v0.2** (§ 4.10), limiteur par processus |
+| **Jeton en `sessionStorage`** | un XSS pourrait lire le jeton de l'onglet | CSP stricte + échappement React ; durée 60 min ; pas de jeton de rafraîchissement |
+| **Pas de révocation de jeton individuelle** | un jeton volé reste valable jusqu'à expiration | désactiver le compte le neutralise immédiatement |
+| **`style-src 'unsafe-inline'`** | requis par les styles inline React/Recharts | signalé par ZAP (WARN), aucun script inline autorisé |
+| **Compte PostgreSQL unique** | l'API utilise le propriétaire du schéma | trigger d'audit indépendant du rôle ; rôles séparés (migration vs runtime) recommandés en production |
 | **Pas de TLS entre conteneurs** | trafic en clair sur le réseau Docker local | réseau bridge privé, mono-hôte |
 | **Pas de vérité terrain** | précision/rappel non calculables | proxies mesurés uniquement, jamais présentés comme précision |
 | **Plages privées acceptées** | un IOC interne peut entrer dans l'inventaire | choix fonctionnel documenté (réponse à incident) |
@@ -208,6 +249,17 @@ Autres recommandations non appliquées : `fail2ban`, désactivation de
 | **MISP non déployé** | publication distante non exercée en réel | client + tests mockés, endpoint honnête (`skipped`) |
 
 ---
+
+## 7 bis. Analyses de sécurité exécutées (16/11/2026)
+
+| Outil | Cible | Résultat |
+|---|---|---|
+| Bandit 1.8.0 | `backend/app` (4 980 lignes) | 1 faux positif (B105, libellé d'audit) annoté `# nosec` → **0 problème** |
+| pip-audit 2.7.3 | `backend/requirements.txt` | 24 avis : Starlette 0.41.3 (7, préexistant) + PyJWT 2.10.1 (17, version d'abord épinglée pour l'authentification) → FastAPI 0.163.1 / Starlette 1.10.0 / PyJWT 2.15.1 → **0** |
+| npm audit | frontend (runtime) | **0** ; outillage de test : 3 (Vitest 3) → Vitest 4 → **0** |
+| Trivy (image) | `soar-ioc-factory-api` | 3 HIGH (zlib1g, wheel, jaraco.context) → Dockerfile durci → **0 HIGH/CRITICAL corrigeable** |
+| Trivy (config + secrets) | Dockerfiles, compose, workflows n8n, `.env.example` | 1 HIGH (nginx root) → image non-root → **0** ; aucun secret détecté |
+| OWASP ZAP baseline | frontend nginx + API (image de production) | **0 FAIL, 60 PASS**, 2 WARN (CSP `unsafe-inline` pour les styles ; « Modern Web App » informatif) — rapport `reports/security/zap-baseline.html` |
 
 ## 8. Checklist opérationnelle
 
