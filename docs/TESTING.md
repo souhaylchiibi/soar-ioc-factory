@@ -1,6 +1,6 @@
 # Tests — stratégie, exécution, couverture réelle
 
-> **224 tests backend au vert** (16/11/2026, ≈ 65 s ; 192 au 14/11), exécutés contre un **vrai PostgreSQL**
+> **224 tests backend au vert** (≈ 65 s), exécutés contre un **vrai PostgreSQL**
 > migré par Alembic. Aucun mock de base de données.
 
 ---
@@ -70,11 +70,11 @@ Options utiles :
 | `test_abusech.py` | 14 | URLhaus/ThreatFox/MalwareBazaar hors ligne : GET vs POST, clé refusée, parsing |
 | `test_pipeline.py` | 11 | pipeline complet, reprise, décisions, expiration/retrait |
 | `test_health.py` | 7 | `/health`, `/ready`, `/system/health`, dégradations |
-| `test_auth_api.py` *(v0.2)* | 22 | authentification, rôles, verrouillage, clé de service, traversée de chemin, rate limit, en-têtes, garde de production |
-| `test_soc_api.py` *(v0.2)* | 10 | funnel, timeline, Detection Center + triage, historique d'exécutions, dossier IOC, recherche, notifications, intégrations |
+| `test_auth_api.py` | 22 | authentification, rôles, verrouillage, clé de service, traversée de chemin, rate limit, en-têtes, garde de production |
+| `test_soc_api.py` | 10 | funnel, timeline, Detection Center + triage, historique d'exécutions, dossier IOC, recherche, notifications, intégrations |
 | **Total backend** | **224** | |
 
-### Frontend (v0.2)
+### Frontend
 
 | Suite | Outil | Tests | Ce qui est prouvé |
 |---|---|---:|---|

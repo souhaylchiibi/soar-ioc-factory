@@ -1,4 +1,4 @@
-# Guide d'utilisation — Console SOC (v0.2)
+# Guide d'utilisation — Console SOC
 
 La console est l'interface des analystes SOC sur SOAR IOC Factory. Tout ce
 qu'elle affiche provient de l'API FastAPI, donc de PostgreSQL (ou d'une sonde
@@ -128,7 +128,7 @@ Actions (analyste) : collecter une source ou toutes.
 État de n8n (sonde `/healthz`), les 8 workflows (dernière exécution, durée,
 opérations sur 7 jours) et l'historique paginé des exécutions avec leur
 déclencheur (**n8n** ou **manuel**). La durée n'est affichée que si l'API l'a
-mesurée (« non mesurée » pour les exécutions antérieures à la v0.2). Les
+mesurée (« non mesurée » sinon). Les
 étapes exposées par l'API peuvent être lancées manuellement (analyste,
 confirmation obligatoire).
 

@@ -45,7 +45,7 @@ export default function App() {
         <Route path="/system-health" element={<Health />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/users" element={<Users />} />
-        {/* v0.1 URLs keep working */}
+        {/* Short aliases, kept for bookmarks */}
         <Route path="/inventory" element={<Navigate to="/threat-intel" replace />} />
         <Route path="/monitoring" element={<Navigate to="/detections" replace />} />
         <Route path="/workflows" element={<Navigate to="/automation" replace />} />

@@ -44,7 +44,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.app_name,
         description="Intelligent Indicator Lifecycle Management — SOAR platform.",
-        version="0.2.0",
+        version="1.0.0",
         lifespan=lifespan,
         # Interactive docs are a development aid, not a production surface.
         docs_url=None if settings.app_env == "production" else "/docs",

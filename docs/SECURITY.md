@@ -148,10 +148,9 @@ Sauter une étape (`NEW → PUBLISHED`) ou ressusciter un `REMOVED` lève
 - Image backend : mises à jour de sécurité Debian appliquées au build et
   outils d'empaquetage (pip, setuptools, wheel) **supprimés** de l'image finale
   (Trivy : 0 vulnérabilité HIGH/CRITICAL corrigeable).
-- Image frontend : `nginx-unprivileged` (UID 101, port interne 8080) — Trivy
-  DS-0002 corrigé.
+- Image frontend : `nginx-unprivileged` (UID 101, port interne 8080).
 
-### 4.9 Authentification et autorisations (v0.2)
+### 4.9 Authentification et autorisations
 
 | Contrôle | Implémentation | Preuve |
 |---|---|---|
@@ -159,7 +158,7 @@ Sauter une étape (`NEW → PUBLISHED`) ou ressusciter un `REMOVED` lève
 | Jetons | JWT HS256 signé par `SECRET_KEY`, expiration 60 min, `exp`/`sub` obligatoires | `test_tampered_token_rejected` |
 | Révocation immédiate | le compte est relu à chaque requête : désactivation / changement de rôle effectifs sans attendre l'expiration | `test_disabled_account_token_is_rejected_immediately` |
 | Rôles | `viewer` < `analyst` < `admin` ; lectures = viewer, opérations = analyst, comptes = admin | `TestAuthorization` |
-| Identité tracée | l'acteur d'audit vient du jeton, jamais du corps de requête (l'ancien champ `actor` est ignoré) | `test_analyst_transition_uses_token_identity_not_body` |
+| Identité tracée | l'acteur d'audit vient du jeton, jamais du corps de requête (un champ `actor` fourni par le client est ignoré) | `test_analyst_transition_uses_token_identity_not_body` |
 | Automatisation | n8n s'authentifie par `X-API-Key` (comparaison à temps constant) ; libellé `X-Actor` filtré et préfixé (`service/…` sauf `workflow-N`) | `TestServiceKey` |
 | Énumération | message unique « Identifiants invalides », coût Argon2 identique pour un compte inexistant | `test_bad_password_is_generic_and_audited` |
 | Force brute | verrouillage du compte après 5 échecs (15 min) + 10 tentatives/min/IP sur `/auth/login` | `test_lockout_after_repeated_failures`, `test_login_rate_limited` |
@@ -167,7 +166,7 @@ Sauter une étape (`NEW → PUBLISHED`) ou ressusciter un `REMOVED` lève
 | Erreurs | 422 sans écho des valeurs soumises (aucun mot de passe renvoyé) ; 500 sans pile | `test_validation_errors_never_echo_password` |
 | Démarrage sûr | en `production`, refus de démarrer si `SECRET_KEY` faible, `AUTH_ENABLED=false`, `DEBUG=true` ou CORS `*` ; Swagger désactivé | `test_production_config_guard` |
 
-### 4.10 Durcissement HTTP (v0.2)
+### 4.10 Durcissement HTTP
 
 - **Rate limiting** applicatif : 600 req/min/IP sur `/api`, 10/min sur le login
   (`app/core/middleware.py`, limiteur par processus — à porter dans le reverse
@@ -179,8 +178,8 @@ Sauter une étape (`NEW → PUBLISHED`) ou ressusciter un `REMOVED` lève
   Polices embarquées et jamais inlinées en `data:` pour respecter `font-src 'self'`.
 - **CORS** : origines explicites, méthodes `GET/POST/PATCH`, en-têtes listés,
   pas de cookies (`allow_credentials=False`).
-- **Traversée de chemin** corrigée : `POST /iocs/detections/ingest?path=` ne lit
-  plus qu'à l'intérieur de `SENSOR_ROOT` (`test_sensor_path_traversal_refused`).
+- **Traversée de chemin** bloquée : `POST /iocs/detections/ingest?path=` ne lit
+  qu'à l'intérieur de `SENSOR_ROOT` (`test_sensor_path_traversal_refused`).
 - **MISP** : vérification TLS activée par défaut (`MISP_VERIFY_CERT=true`).
 
 ---
@@ -201,8 +200,10 @@ Sauter une étape (`NEW → PUBLISHED`) ou ressusciter un `REMOVED` lève
 | Pipeline de bout en bout | 11 tests | `test_pipeline.py` |
 | MISP (client REST) | 18 tests mockés | `test_misp.py` |
 | Collecteurs abuse.ch | 14 tests hors ligne | `test_abusech.py` |
+| Authentification, rôles, verrouillage, clé de service, traversée de chemin, en-têtes | 22 tests | `test_auth_api.py` |
+| API SOC (funnel, détections, qualification, intégrations) | 10 tests | `test_soc_api.py` |
 
-Total : **191 tests**, exécutés contre un **vrai PostgreSQL**
+Total : **224 tests**, exécutés contre un **vrai PostgreSQL**
 (`soar_ioc_test`, migré par Alembic) — pas de SQLite de substitution.
 
 ---
@@ -236,8 +237,7 @@ Autres recommandations non appliquées : `fail2ban`, désactivation de
 
 | Limite | Impact | Décision |
 |---|---|---|
-| ~~API sans authentification~~ | — | **corrigé en v0.2** (§ 4.9) |
-| ~~Pas de rate-limiting~~ | — | **corrigé en v0.2** (§ 4.10), limiteur par processus |
+| **Limitation de débit par processus** | contournable avec plusieurs workers | suffisant en mono-instance ; à porter au reverse proxy sinon |
 | **Jeton en `sessionStorage`** | un XSS pourrait lire le jeton de l'onglet | CSP stricte + échappement React ; durée 60 min ; pas de jeton de rafraîchissement |
 | **Pas de révocation de jeton individuelle** | un jeton volé reste valable jusqu'à expiration | désactiver le compte le neutralise immédiatement |
 | **`style-src 'unsafe-inline'`** | requis par les styles inline React/Recharts | signalé par ZAP (WARN), aucun script inline autorisé |
@@ -245,20 +245,20 @@ Autres recommandations non appliquées : `fail2ban`, désactivation de
 | **Pas de TLS entre conteneurs** | trafic en clair sur le réseau Docker local | réseau bridge privé, mono-hôte |
 | **Pas de vérité terrain** | précision/rappel non calculables | proxies mesurés uniquement, jamais présentés comme précision |
 | **Plages privées acceptées** | un IOC interne peut entrer dans l'inventaire | choix fonctionnel documenté (réponse à incident) |
-| **Clé abuse.ch absente ou révoquée** | 3 collecteurs indisponibles | échec explicite, aucune donnée simulée pour compenser |
+| **Clé abuse.ch absente ou révoquée** | 3 collecteurs indisponibles | « Configuration manquante » / échec explicite, aucune donnée simulée |
 | **MISP non déployé** | publication distante non exercée en réel | client + tests mockés, endpoint honnête (`skipped`) |
 
 ---
 
-## 7 bis. Analyses de sécurité exécutées (16/11/2026)
+## 7 bis. Analyses de sécurité exécutées
 
 | Outil | Cible | Résultat |
 |---|---|---|
-| Bandit 1.8.0 | `backend/app` (4 980 lignes) | 1 faux positif (B105, libellé d'audit) annoté `# nosec` → **0 problème** |
-| pip-audit 2.7.3 | `backend/requirements.txt` | 24 avis : Starlette 0.41.3 (7, préexistant) + PyJWT 2.10.1 (17, version d'abord épinglée pour l'authentification) → FastAPI 0.163.1 / Starlette 1.10.0 / PyJWT 2.15.1 → **0** |
-| npm audit | frontend (runtime) | **0** ; outillage de test : 3 (Vitest 3) → Vitest 4 → **0** |
-| Trivy (image) | `soar-ioc-factory-api` | 3 HIGH (zlib1g, wheel, jaraco.context) → Dockerfile durci → **0 HIGH/CRITICAL corrigeable** |
-| Trivy (config + secrets) | Dockerfiles, compose, workflows n8n, `.env.example` | 1 HIGH (nginx root) → image non-root → **0** ; aucun secret détecté |
+| Bandit 1.8.0 | `backend/app` | **0 problème** (1 faux positif B105 — libellé d'audit — annoté `# nosec`) |
+| pip-audit 2.7.3 | `backend/requirements.txt` (FastAPI 0.163.1, Starlette 1.10.0, PyJWT 2.15.1) | **0 vulnérabilité connue** |
+| npm audit | frontend (runtime et outillage) | **0 vulnérabilité** |
+| Trivy (image) | `soar-ioc-factory-api` (mises à jour Debian, sans outils d'empaquetage) | **0 HIGH/CRITICAL corrigeable** |
+| Trivy (config + secrets) | Dockerfiles, compose, workflows n8n, `.env.example` | **0 problème** ; aucun secret détecté |
 | OWASP ZAP baseline | frontend nginx + API (image de production) | **0 FAIL, 60 PASS**, 2 WARN (CSP `unsafe-inline` pour les styles ; « Modern Web App » informatif) — rapport `reports/security/zap-baseline.html` |
 
 ## 8. Checklist opérationnelle
