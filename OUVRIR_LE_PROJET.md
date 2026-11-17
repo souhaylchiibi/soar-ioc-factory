@@ -62,13 +62,17 @@ cd "C:\Users\T480s\Desktop\SOAR project"
 # 1. Métriques réelles + 7 graphiques + EVALUATION.md (lit PostgreSQL)
 .\backend\.venv\Scripts\python.exe scripts\evaluate_platform.py
 
-# 2. Rapport Word du jury (réutilise metrics.json + captures)
-.\backend\.venv\Scripts\python.exe scripts\generate_report.py
-# -> reports/RAPPORT_SOAR_IOC_FACTORY.docx
+# 2. Faits mesurés pour le rapport et la présentation
+.\backend\.venv\Scripts\python.exe scripts\collect_facts.py --aws-json reports\data\aws.json
 
-# 3. Rapport final complet (page de garde, sommaire, 32 tableaux, 22 figures)
-.\backend\.venv\Scripts\python.exe scripts\build_final_report.py
-# -> reports/RAPPORT_FINAL.docx
+# 3. Rapport de projet (29 pages), puis sommaire + PDF via Word
+.\backend\.venv\Scripts\python.exe scripts\build_rapport_projet.py
+powershell -File scripts\word_finalize.ps1 reports\RAPPORT_SOAR_IOC_FACTORY_PROJET.docx
+# -> reports/RAPPORT_SOAR_IOC_FACTORY_PROJET.docx + .pdf
+
+# 4. Présentation de soutenance (19 diapositives ; NODE_PATH vers pptxgenjs, react, react-icons, sharp)
+node scripts\build_presentation_projet.js "<racine du projet>" "<chemin vers apply_theme.js>"
+# -> reports/PRESENTATION_SOAR_IOC_FACTORY_PROJET.pptx
 ```
 
 ### A8. Documentation de référence
@@ -160,11 +164,11 @@ Ne **jamais** `docker compose down -v` ni `docker volume rm` : cela détruirait 
 
 | Élément | Chemin |
 |---|---|
-| Rapport Word (court) | `reports/RAPPORT_SOAR_IOC_FACTORY.docx` |
-| Rapport Word (final, complet) | `reports/RAPPORT_FINAL.docx` |
-| Évaluation Phase 7 | `reports/evaluation/EVALUATION.md` + `metrics.json` |
-| Graphiques de l'évaluation (7) | `reports/figures/` |
-| Captures (14) | `capture/` |
+| Rapport de projet | `reports/RAPPORT_SOAR_IOC_FACTORY_PROJET.docx` (+ `.pdf`) |
+| Présentation de soutenance | `reports/PRESENTATION_SOAR_IOC_FACTORY_PROJET.pptx` (+ `.pdf`) |
+| Évaluation | `reports/evaluation/EVALUATION.md` + `metrics.json` |
+| Graphiques | `reports/figures/` (évaluation) · `reports/data/` (rapport) |
+| Captures (24) | `capture/2026-11-17/` (`console-*` local, `aws-*` serveur) |
 | Docs | `README.md` + `docs/` (installation, workflows, sécurité, tests, usage) |
 | Workflows n8n | `workflows/n8n/*.json` (8) |
 | Scripts AWS | `infrastructure/aws/` (5 scripts idempotents) |

@@ -12,8 +12,9 @@ La capacité technique vient de `python-docx` ; ce skill fixe les conventions.
 
 - Interpréteur : `backend\.venv\Scripts\python.exe` (`python` n'est pas dans le PATH).
 - Bibliothèque : `python-docx` 1.1.2, déjà installée (`backend/requirements-dev.txt`).
-- Générateur existant à réutiliser : `scripts/generate_report.py` (styles, `image()`,
-  `figure()`, tableaux, sections 1–15). Générateur final : `scripts/build_final_report.py`.
+- Générateur à réutiliser : `scripts/build_rapport_projet.py` (styles, `table()`, `figure()`,
+  `callout()`, `kpis()`), données `reports/data/facts.json` (`scripts/collect_facts.py`),
+  finalisation sommaire + PDF : `scripts/word_finalize.ps1`.
 
 ## Règles de contenu (non négociables)
 
@@ -30,13 +31,13 @@ La capacité technique vient de `python-docx` ; ce skill fixe les conventions.
 - A4, marges 2 cm, Calibri 10,5 pt, titres bleu `#0E5A8A`.
 - Page de garde, sommaire (champ `TOC`), en-tête, pied « Page X sur Y ».
 - Tableaux et figures numérotés, légende + source sous chaque tableau.
-- Captures : `capture/*.jpg` · graphiques : `reports/figures/eval_*.png`.
+- Captures : `capture/2026-11-17/*.png` · graphiques : `reports/figures/eval_*.png`, `reports/data/fig_*.png`.
 - Champs Word : `w:updateFields` à `true` pour que le sommaire se mette à jour.
 
 ## Vérification avant de livrer
 
 ```powershell
-.\backend\.venv\Scripts\python.exe -c "from docx import Document; d=Document('reports/RAPPORT_FINAL.docx'); print(len(d.paragraphs), len(d.inline_shapes))"
+.\backend\.venv\Scripts\python.exe -c "from docx import Document; d=Document('reports/RAPPORT_SOAR_IOC_FACTORY_PROJET.docx'); print(len(d.paragraphs), len(d.inline_shapes))"
 ```
 
 - Poids > 1 Mo, aucune occurrence de « None », « TODO » ou « indisponible » injustifié.
