@@ -1,21 +1,21 @@
 {
-  "generated_at": "2026-11-16T22:29:55.728417+00:00",
+  "generated_at": "2026-11-17T01:01:33.758000+00:00",
   "local": {
     "stats": {
       "total_iocs": 454,
-      "active_iocs": 370,
+      "active_iocs": 369,
       "expired_iocs": 0,
-      "rejected_iocs": 83,
+      "rejected_iocs": 84,
       "removed_iocs": 1,
       "review_required": 0,
       "published_iocs": 1,
-      "monitored_iocs": 132,
+      "monitored_iocs": 368,
       "duplicates_seen": 0,
       "synthetic_iocs": 0,
       "false_positives": 0,
       "total_detections": 16,
-      "avg_score": 52.4,
-      "avg_processing_seconds": 295943.5,
+      "avg_score": 54.0,
+      "avg_processing_seconds": 142905.0,
       "dedup_rate": 0.1633,
       "by_type": {
         "HASH_SHA256": 50,
@@ -28,20 +28,19 @@
       "by_status": {
         "REMOVED": 1,
         "PUBLISHED": 1,
-        "MONITORED": 132,
-        "NORMALIZED": 237,
-        "REJECTED": 83
+        "MONITORED": 368,
+        "REJECTED": 84
       },
       "by_risk": {
         "CRITICAL": 2,
-        "HIGH": 3,
-        "MEDIUM": 129,
-        "LOW": 83
+        "HIGH": 7,
+        "MEDIUM": 361,
+        "LOW": 84
       },
       "score_distribution": {
-        "0-49": 83,
-        "50-64": 129,
-        "65-79": 3,
+        "0-49": 84,
+        "50-64": 361,
+        "65-79": 7,
         "80-89": 2,
         "90-100": 0
       },
@@ -86,21 +85,21 @@
         {
           "key": "enrich",
           "label": "Enrichissement",
-          "count": 217,
+          "count": 454,
           "current": 0,
           "proof": "lifecycle_events.to_status='ENRICHED'"
         },
         {
           "key": "score",
           "label": "Scoring",
-          "count": 217,
+          "count": 454,
           "current": 0,
           "proof": "lifecycle_events.to_status='SCORED'"
         },
         {
           "key": "decide",
           "label": "Décision",
-          "count": 219,
+          "count": 456,
           "current": null,
           "proof": "lifecycle_events.to_status IN (PUBLISHED, MONITORED, REJECTED, REVIEW_REQUIRED)"
         },
@@ -114,8 +113,8 @@
         {
           "key": "monitor",
           "label": "Surveillance",
-          "count": 134,
-          "current": 132,
+          "count": 370,
+          "current": 368,
           "proof": "lifecycle_events.to_status='MONITORED'"
         },
         {
@@ -135,30 +134,20 @@
       ],
       "decisions": {
         "publish": 2,
-        "monitor": 134,
-        "reject": 83,
+        "monitor": 370,
+        "reject": 84,
         "review": 0
       },
       "current": {
         "REMOVED": 1,
         "PUBLISHED": 1,
-        "MONITORED": 132,
-        "NORMALIZED": 237,
-        "REJECTED": 83
+        "MONITORED": 368,
+        "REJECTED": 84
       },
       "verified_removals": 1,
       "collected_items": 545
     },
     "timeline": [
-      {
-        "date": "2026-10-18",
-        "created": 0,
-        "published": 0,
-        "monitored": 0,
-        "rejected": 0,
-        "expired": 0,
-        "detections": 0
-      },
       {
         "date": "2026-10-19",
         "created": 0,
@@ -415,6 +404,15 @@
         "date": "2026-11-16",
         "created": 237,
         "published": 0,
+        "monitored": 236,
+        "rejected": 1,
+        "expired": 0,
+        "detections": 0
+      },
+      {
+        "date": "2026-11-17",
+        "created": 0,
+        "published": 0,
         "monitored": 0,
         "rejected": 0,
         "expired": 0,
@@ -576,9 +574,31 @@
       }
     ],
     "runs": {
-      "total": 17,
+      "total": 25,
       "failed": 0,
-      "measured": 1
+      "measured": 9
+    },
+    "processing": {
+      "COLLECT": {
+        "runs": 1,
+        "duration_ms": 37747,
+        "items": 260
+      },
+      "ENRICH": {
+        "runs": 6,
+        "duration_ms": 199262,
+        "items": 240
+      },
+      "SCORE": {
+        "runs": 1,
+        "duration_ms": 2399,
+        "items": 237
+      },
+      "PUBLISH": {
+        "runs": 1,
+        "duration_ms": 20,
+        "items": 0
+      }
     }
   },
   "aws": {
@@ -623,40 +643,38 @@
       "region": "us-east-1",
       "access": "tunnel SSH (127.0.0.1:8091 -> 127.0.0.1:80)"
     },
-    "deployed_at": "2026-11-16T22:25:11+00:00",
-    "backup": "~/backups/soar_ioc_pre_v02_20261116.dump + dossier v0.1 conservé"
+    "deployed_at": "2026-11-16T22:25:11+00:00"
   },
   "repo": {
     "branch": "v0.2-console-soc",
-    "commit": "f90da0e",
-    "commits": 26,
-    "tracked_files": 245,
-    "v02_diff": "123 files changed, 9835 insertions(+), 1932 deletions(-)"
+    "commit": "ff53b5d",
+    "commits": 28,
+    "tracked_files": 273
   },
   "tests": [
     {
-      "suite": "Backend pytest (PostgreSQL réel)",
+      "suite": "API et moteur (PostgreSQL réel)",
       "tool": "pytest",
       "count": 224,
       "passed": 224,
       "command": "pytest tests -q"
     },
     {
-      "suite": "Frontend unitaires",
+      "suite": "Console — composants et pages",
       "tool": "Vitest + RTL",
       "count": 23,
       "passed": 23,
       "command": "npm test"
     },
     {
-      "suite": "End-to-end local",
+      "suite": "Bout en bout — poste local",
       "tool": "Playwright",
       "count": 8,
       "passed": 8,
       "command": "npm run test:e2e"
     },
     {
-      "suite": "End-to-end AWS (tunnel)",
+      "suite": "Bout en bout — serveur AWS (tunnel)",
       "tool": "Playwright",
       "count": 8,
       "passed": 8,
@@ -666,39 +684,28 @@
   "security_scans": [
     {
       "tool": "Bandit",
-      "before": 1,
-      "after": 0,
-      "note": "1 faux positif B105 annoté"
+      "scope": "code Python de l'API",
+      "result": "aucun problème"
     },
     {
       "tool": "pip-audit",
-      "before": 24,
-      "after": 0,
-      "note": "Starlette 0.41.3 (7) + PyJWT 2.10.1 (17)"
+      "scope": "dépendances Python",
+      "result": "aucune vulnérabilité connue"
     },
     {
       "tool": "npm audit",
-      "before": 3,
-      "after": 0,
-      "note": "outillage Vitest 3 (dev)"
+      "scope": "dépendances JavaScript",
+      "result": "aucune vulnérabilité"
     },
     {
-      "tool": "Trivy image",
-      "before": 3,
-      "after": 0,
-      "note": "zlib1g, wheel, jaraco.context (HIGH)"
-    },
-    {
-      "tool": "Trivy config",
-      "before": 1,
-      "after": 0,
-      "note": "nginx exécuté en root (DS-0002)"
+      "tool": "Trivy",
+      "scope": "image API, Dockerfiles, compose",
+      "result": "0 HIGH/CRITICAL corrigeable, aucun secret"
     },
     {
       "tool": "OWASP ZAP",
-      "before": 0,
-      "after": 0,
-      "note": "0 FAIL, 60 PASS, 2 WARN documentés"
+      "scope": "console + API",
+      "result": "0 échec, 60 contrôles réussis, 2 avertissements documentés"
     }
   ]
 }

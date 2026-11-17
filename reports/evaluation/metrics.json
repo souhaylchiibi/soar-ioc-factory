@@ -1,126 +1,126 @@
 {
-  "generated_at": "2026-11-14T01:13:39.865374+00:00",
+  "generated_at": "2026-11-17T01:00:51.072232+00:00",
   "database": "soar_ioc",
   "inventory": {
-    "total_iocs": 217,
+    "total_iocs": 454,
     "by_status": {
-      "REMOVED": 1,
       "PUBLISHED": 1,
-      "MONITORED": 132,
-      "REJECTED": 83
+      "MONITORED": 368,
+      "REMOVED": 1,
+      "REJECTED": 84
     },
     "by_type": {
-      "HASH_SHA256": 28,
-      "URL": 19,
-      "HASH_SHA1": 5,
-      "HASH_MD5": 8,
-      "DOMAIN": 99,
-      "IP": 58
+      "IP": 98,
+      "DOMAIN": 194,
+      "URL": 70,
+      "HASH_MD5": 22,
+      "HASH_SHA1": 20,
+      "HASH_SHA256": 50
     },
     "by_risk": {
       "CRITICAL": 2,
-      "HIGH": 3,
-      "MEDIUM": 129,
-      "LOW": 83
+      "HIGH": 7,
+      "MEDIUM": 361,
+      "LOW": 84
     },
     "synthetic_iocs": 0,
     "with_duplicate_of": 0,
     "with_expiry": 1
   },
   "dedup": {
-    "raw_items_collected": 285,
-    "created": 217,
-    "updated": 67,
-    "duplicates_dropped_at_ingest": 0,
+    "raw_items_collected": 545,
+    "created": 691,
+    "updated": 111,
+    "duplicates_dropped_at_ingest": 2,
     "invalid_rejected": 1,
-    "dedup_events": 67,
-    "normalize_events": 219,
-    "dedup_rate_pct": 23.4,
+    "dedup_events": 89,
+    "normalize_events": 456,
+    "dedup_rate_pct": 16.3,
     "duplicate_rate_of_inventory_pct": 0.0
   },
   "enrichment": {
-    "results": 194,
-    "iocs_enriched": 182,
-    "coverage_pct": 83.9,
-    "provider_errors": 14,
-    "provider_success_pct": 92.8,
-    "avg_results_per_enriched_ioc": 1.07,
+    "results": 471,
+    "iocs_enriched": 419,
+    "coverage_pct": 92.3,
+    "provider_errors": 21,
+    "provider_success_pct": 95.5,
+    "avg_results_per_enriched_ioc": 1.12,
     "by_provider": {
-      "otx": 183,
-      "abuseipdb": 11
+      "otx": 420,
+      "abuseipdb": 51
     },
     "by_verdict": {
-      "abuseipdb/benign": 2,
-      "otx/suspicious": 14,
-      "abuseipdb/suspicious": 3,
-      "abuseipdb/unknown": 5,
-      "abuseipdb/malicious": 1,
-      "otx/malicious": 28,
-      "otx/unknown": 141
+      "abuseipdb/benign": 3,
+      "otx/suspicious": 33,
+      "abuseipdb/suspicious": 10,
+      "abuseipdb/unknown": 10,
+      "abuseipdb/malicious": 28,
+      "otx/malicious": 45,
+      "otx/unknown": 342
     }
   },
   "scoring": {
-    "scored_iocs": 217,
+    "scored_iocs": 454,
     "coverage_pct": 100.0,
-    "avg": 52.4,
+    "avg": 54.0,
     "median": 54.0,
     "p95": 64.0,
     "min": 37.0,
     "max": 82.0,
     "distribution": {
-      "0-49 (rejet)": 83,
-      "50-64 (surveillance)": 129,
-      "65-79 (surveillance)": 3,
+      "0-49 (rejet)": 84,
+      "50-64 (surveillance)": 361,
+      "65-79 (surveillance)": 7,
       "80-89 (publication)": 2,
       "90-100 (publication)": 0
     },
     "decisions": {
       "publish": 1,
-      "monitor": 132,
-      "reject": 83
+      "monitor": 368,
+      "reject": 84
     },
     "decisions_pct": {
-      "publish": 0.5,
-      "monitor": 60.8,
-      "reject": 38.2
+      "publish": 0.2,
+      "monitor": 81.1,
+      "reject": 18.5
     },
-    "explainable_iocs": 217,
+    "explainable_iocs": 454,
     "explainability_pct": 100.0,
     "components_avg": [
       {
         "key": "enrichment_agreement",
         "label": "Consensus d'enrichissement",
-        "avg_points": 10.18,
+        "avg_points": 9.82,
         "max_points": 20.0,
-        "avg_pct_of_max": 50.9
+        "avg_pct_of_max": 49.1
       },
       {
         "key": "freshness",
         "label": "Fraîcheur",
-        "avg_points": 16.0,
+        "avg_points": 17.9,
         "max_points": 20.0,
-        "avg_pct_of_max": 80.0
+        "avg_pct_of_max": 89.5
       },
       {
         "key": "independent_sources",
         "label": "Sources indépendantes",
         "avg_points": 8.61,
         "max_points": 20.0,
-        "avg_pct_of_max": 43.0
+        "avg_pct_of_max": 43.1
       },
       {
         "key": "observed_detections",
         "label": "Détections observées",
-        "avg_points": 0.14,
+        "avg_points": 0.07,
         "max_points": 15.0,
-        "avg_pct_of_max": 0.9
+        "avg_pct_of_max": 0.4
       },
       {
         "key": "source_reliability",
         "label": "Fiabilité de la source",
-        "avg_points": 17.49,
+        "avg_points": 17.69,
         "max_points": 25.0,
-        "avg_pct_of_max": 70.0
+        "avg_pct_of_max": 70.7
       }
     ],
     "policy": "v1"
@@ -147,7 +147,7 @@
   "detection": {
     "total": 16,
     "iocs_with_detections": 2,
-    "coverage_pct": 0.9,
+    "coverage_pct": 0.4,
     "false_positives": 0,
     "false_positive_rate_pct": 0.0,
     "by_sensor": {
@@ -157,51 +157,51 @@
     }
   },
   "lifecycle": {
-    "transitions_total": 872,
+    "transitions_total": 1820,
     "by_target_status": {
       "PUBLISHED": 2,
-      "ENRICHED": 217,
-      "MONITORED": 134,
+      "ENRICHED": 454,
+      "MONITORED": 370,
       "REMOVED": 1,
-      "NORMALIZED": 217,
-      "REJECTED": 83,
+      "NORMALIZED": 454,
+      "REJECTED": 84,
       "EXPIRED": 1,
-      "SCORED": 217
+      "SCORED": 454
     },
     "stages": [
       {
         "stage": "NORMALIZED",
-        "observed": 217,
+        "observed": 454,
         "avg_seconds_all": 0.0,
         "avg_seconds_hot": 0.0,
         "max_seconds": 0.0
       },
       {
         "stage": "ENRICHED",
-        "observed": 217,
-        "avg_seconds_all": 129782.34,
-        "avg_seconds_hot": 96.47,
+        "observed": 454,
+        "avg_seconds_all": 63408.1,
+        "avg_seconds_hot": 1643.12,
         "max_seconds": 597904.44
       },
       {
         "stage": "SCORED",
-        "observed": 217,
-        "avg_seconds_all": 166168.42,
-        "avg_seconds_hot": 38.61,
+        "observed": 454,
+        "avg_seconds_all": 79500.34,
+        "avg_seconds_hot": 103.39,
         "max_seconds": 597737.8
       },
       {
         "stage": "MONITORED",
-        "observed": 134,
-        "avg_seconds_all": 4500.19,
-        "avg_seconds_hot": 39.76,
+        "observed": 370,
+        "avg_seconds_all": 1722.87,
+        "avg_seconds_hot": 107.65,
         "max_seconds": 597737.8
       },
       {
         "stage": "REJECTED",
-        "observed": 83,
-        "avg_seconds_all": 427174.96,
-        "avg_seconds_hot": 31.98,
+        "observed": 84,
+        "avg_seconds_all": 422091.59,
+        "avg_seconds_hot": 37.8,
         "max_seconds": 597737.8
       },
       {
@@ -237,36 +237,38 @@
     "removed": 1
   },
   "performance": {
-    "iocs_with_latency": 217,
-    "hot_latency_iocs": 108,
-    "hot_latency_avg_s": 81.8,
-    "hot_latency_max_s": 141.5,
+    "iocs_with_latency": 454,
+    "hot_latency_iocs": 345,
+    "hot_latency_avg_s": 1936.1,
+    "hot_latency_max_s": 2781.1,
     "backlog_iocs": 109,
     "backlog_latency_avg_h": 163.6,
     "backlog_note": "Les indicateurs 'backlog' ont ete notations apres un arret volontaire de la plateforme (07/11 -> 14/11) : ce delai mesure l'indisponibilite, pas la performance.",
-    "hot_batch_throughput_ioc_per_s": 1.32,
-    "hot_batch_iocs": 108,
+    "hot_batch_throughput_ioc_per_s": 0.18,
+    "hot_batch_iocs": 345,
     "scoring_engine": {
       "iterations": 5000,
-      "total_ms": 229.3,
-      "us_per_score": 45.9,
-      "scores_per_second": 21809.0
+      "total_ms": 182.7,
+      "us_per_score": 36.5,
+      "scores_per_second": 27365.0
     }
   },
   "audit": {
-    "events": 548,
-    "failed": 2,
+    "events": 1107,
+    "failed": 9,
     "by_action": {
-      "SCORE": 219,
-      "NORMALIZE": 219,
-      "DEDUP": 67,
+      "SCORE": 457,
+      "NORMALIZE": 456,
+      "DEDUP": 89,
+      "LOGIN": 44,
+      "COLLECT": 21,
       "OBSERVE": 14,
-      "COLLECT": 13,
-      "ENRICH": 7,
-      "PUBLISH": 4,
-      "EXPORT": 2,
-      "CONFIG_CHANGE": 1,
+      "ENRICH": 13,
+      "PUBLISH": 5,
+      "EXPORT": 4,
+      "USER_CREATE": 1,
       "REMOVE": 1,
+      "CONFIG_CHANGE": 1,
       "EXPIRE": 1
     }
   },
@@ -276,42 +278,42 @@
       "kind": "OPEN_SOURCE",
       "enabled": true,
       "reliability": 70,
-      "ioc_count": 79
-    },
-    {
-      "name": "blocklist_de",
-      "kind": "COMMUNITY",
-      "enabled": true,
-      "reliability": 60,
-      "ioc_count": 50
+      "ioc_count": 123
     },
     {
       "name": "alienvault_otx",
       "kind": "OPEN_SOURCE",
       "enabled": true,
       "reliability": 80,
-      "ioc_count": 40
+      "ioc_count": 90
     },
     {
-      "name": "malwarebazaar",
+      "name": "blocklist_de",
       "kind": "COMMUNITY",
       "enabled": true,
-      "reliability": 70,
-      "ioc_count": 16
+      "reliability": 60,
+      "ioc_count": 89
     },
     {
       "name": "urlhaus",
       "kind": "COMMUNITY",
       "enabled": true,
       "reliability": 70,
-      "ioc_count": 15
+      "ioc_count": 65
     },
     {
       "name": "threatfox",
       "kind": "COMMUNITY",
       "enabled": true,
       "reliability": 75,
-      "ioc_count": 13
+      "ioc_count": 63
+    },
+    {
+      "name": "malwarebazaar",
+      "kind": "COMMUNITY",
+      "enabled": true,
+      "reliability": 70,
+      "ioc_count": 21
     },
     {
       "name": "feodotracker",
@@ -343,11 +345,11 @@
       "note": "Temps unitaires par indicateur pour un analyste SOC sans automatisation. Modele explicite servant de point de comparaison : ce n'est PAS une mesure du passe. Les chiffres automatises, eux, viennent tous de la base."
     },
     "manual_minutes_per_ioc": 17.0,
-    "automated_minutes_per_ioc": 1.36,
-    "time_reduction_factor": 12.5,
-    "manual_hours_for_inventory": 61.5,
-    "automated_hours_for_inventory": 4.92,
-    "hours_saved_for_inventory": 56.6,
+    "automated_minutes_per_ioc": 32.27,
+    "time_reduction_factor": 0.5,
+    "manual_hours_for_inventory": 128.6,
+    "automated_hours_for_inventory": 244.18,
+    "hours_saved_for_inventory": -115.5,
     "steps_automated": [
       "collecte multi-sources (4 collecteurs actifs)",
       "normalisation + validation + dedup par empreinte",

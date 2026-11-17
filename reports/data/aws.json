@@ -40,6 +40,5 @@
     "region": "us-east-1",
     "access": "tunnel SSH (127.0.0.1:8091 -> 127.0.0.1:80)"
   },
-  "deployed_at": "2026-11-16T22:25:11+00:00",
-  "backup": "~/backups/soar_ioc_pre_v02_20261116.dump + dossier v0.1 conserv\u00e9"
+  "deployed_at": "2026-11-16T22:25:11+00:00"
 }

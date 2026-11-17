@@ -84,8 +84,8 @@ de provenance, scoring explicable, données synthétiques marquées.
 - Surcoût : 0 $ (même instance t2.large, mêmes conteneurs).
 
 ### Livrables documentaires
-- `reports/RAPPORT_V2_SOAR_IOC_FACTORY.docx` + `.pdf` (18 pages, 13 tableaux, 16 figures) — `scripts/collect_v2_facts.py` puis `scripts/build_report_v2.py`, finalisé par `scripts/word_finalize.ps1`.
-- `reports/PRESENTATION_V2_SOAR_IOC_FACTORY.pptx` + `.pdf` (14 diapositives, notes orateur) — `scripts/build_presentation_v2.js`.
+- `reports/RAPPORT_SOAR_IOC_FACTORY_PROJET.docx` + `.pdf` (29 pages, 29 tableaux, 22 figures) — `scripts/evaluate_platform.py`, `scripts/collect_facts.py`, `scripts/build_rapport_projet.py`, finalisé par `scripts/word_finalize.ps1`.
+- `reports/PRESENTATION_SOAR_IOC_FACTORY_PROJET.pptx` + `.pdf` (19 diapositives, notes orateur) — `scripts/build_presentation_projet.js`.
 
 ## 3. Fonctionnalités partiellement terminées
 

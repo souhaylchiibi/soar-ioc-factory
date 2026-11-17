@@ -165,10 +165,9 @@ administrateur), console SOC redessinée (design system dédié, recherche
 `Ctrl K`, notifications, confirmations), Detection Center avec qualification
 des alertes, état réel des intégrations, durées d'exécution mesurées,
 durcissement (rate limiting, CSP, images non-root, dépendances corrigées).
-Détail : [`docs/LIVRAISON_V2.md`](docs/LIVRAISON_V2.md) · rapport
-[`reports/RAPPORT_V2_SOAR_IOC_FACTORY.docx`](reports/RAPPORT_V2_SOAR_IOC_FACTORY.docx)
-(18 pages, PDF à côté) · soutenance
-[`reports/PRESENTATION_V2_SOAR_IOC_FACTORY.pptx`](reports/PRESENTATION_V2_SOAR_IOC_FACTORY.pptx) (14 diapositives).
+Rapport de projet complet : [`reports/RAPPORT_SOAR_IOC_FACTORY_PROJET.docx`](reports/RAPPORT_SOAR_IOC_FACTORY_PROJET.docx)
+(29 pages, PDF à côté) · soutenance : [`reports/PRESENTATION_SOAR_IOC_FACTORY_PROJET.pptx`](reports/PRESENTATION_SOAR_IOC_FACTORY_PROJET.pptx)
+(19 diapositives) · détail technique de la livraison : [`docs/LIVRAISON_V2.md`](docs/LIVRAISON_V2.md).
 
 ### Console v0.1 (14/11/2026)
 

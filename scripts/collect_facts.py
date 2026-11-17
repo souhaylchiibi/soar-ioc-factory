@@ -1,4 +1,4 @@
-"""Collect the measured facts used by the v0.2 report (reports/v2/facts.json).
+"""Collect the measured facts used by the project report and the deck (reports/data/facts.json).
 
 Sources (nothing is typed by hand except the test/scan results, which are
 recorded with the command that produced them on 16/11/2026):
@@ -7,7 +7,7 @@ recorded with the command that produced them on 16/11/2026):
   * git for repository statistics.
 
 Usage (from the repo root, DB env vars set as for the tests):
-  backend/.venv/Scripts/python.exe scripts/collect_v2_facts.py [--aws-json aws.json]
+  backend/.venv/Scripts/python.exe scripts/collect_facts.py [--aws-json reports/data/aws.json]
 """
 from __future__ import annotations
 
@@ -24,8 +24,10 @@ sys.path.insert(0, str(ROOT / "backend"))
 from app.api.iocs import dashboard_stats  # noqa: E402
 from app.api.soc import lifecycle_funnel, sources_overview, timeline, workflow_runs  # noqa: E402
 from app.core.db import SessionLocal  # noqa: E402
+from app.models.ioc import AuditLog  # noqa: E402
+from sqlalchemy import select  # noqa: E402
 
-OUT = ROOT / "reports" / "v2" / "facts.json"
+OUT = ROOT / "reports" / "data" / "facts.json"
 
 
 def git(*args: str) -> str:
@@ -43,6 +45,22 @@ def main() -> int:
         series = timeline(db, days=30)
         sources = sources_overview(db)
         runs = workflow_runs(db, action=None, actor=None, offset=0, limit=200)
+        # Machine time actually spent per pipeline stage (runs that recorded duration_ms).
+        processing: dict[str, dict] = {}
+        for a in db.execute(select(AuditLog).where(AuditLog.entity_type == "batch")).scalars():
+            d = a.detail if isinstance(a.detail, dict) else {}
+            if not isinstance(d.get("duration_ms"), (int, float)):
+                continue
+            items = next((d[k] for k in ("created", "enriched", "scored", "published", "expired", "removed", "matched", "normalized")
+                          if isinstance(d.get(k), int)), 0)
+            if a.action == "COLLECT":
+                items = sum(d.get(k, 0) for k in ("created", "updated", "duplicates", "rejected"))
+            if a.action == "ENRICH":
+                items = d.get("targets", items)
+            st = processing.setdefault(a.action, {"runs": 0, "duration_ms": 0, "items": 0})
+            st["runs"] += 1
+            st["duration_ms"] += int(d["duration_ms"])
+            st["items"] += int(items or 0)
 
     facts = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -53,6 +71,7 @@ def main() -> int:
             "sources": sources["sources"],
             "runs": {"total": runs["total"], "failed": runs["failed_total"],
                      "measured": sum(1 for r in runs["runs"] if r["duration_ms"] is not None)},
+            "processing": processing,
         },
         "aws": json.loads(args.aws_json.read_text(encoding="utf-8")) if args.aws_json else None,
         "repo": {
@@ -60,26 +79,24 @@ def main() -> int:
             "commit": git("rev-parse", "--short", "HEAD"),
             "commits": int(git("rev-list", "--count", "HEAD") or 0),
             "tracked_files": len(git("ls-files").splitlines()),
-            "v02_diff": git("diff", "--shortstat", "HEAD~1", "HEAD"),
         },
-        # Results of the commands run on 16/11/2026 (see docs/LIVRAISON_V2.md §5).
+        # Results of the commands run on 16/11/2026 (see docs/TESTING.md).
         "tests": [
-            {"suite": "Backend pytest (PostgreSQL réel)", "tool": "pytest", "count": 224, "passed": 224,
+            {"suite": "API et moteur (PostgreSQL réel)", "tool": "pytest", "count": 224, "passed": 224,
              "command": "pytest tests -q"},
-            {"suite": "Frontend unitaires", "tool": "Vitest + RTL", "count": 23, "passed": 23,
+            {"suite": "Console — composants et pages", "tool": "Vitest + RTL", "count": 23, "passed": 23,
              "command": "npm test"},
-            {"suite": "End-to-end local", "tool": "Playwright", "count": 8, "passed": 8,
+            {"suite": "Bout en bout — poste local", "tool": "Playwright", "count": 8, "passed": 8,
              "command": "npm run test:e2e"},
-            {"suite": "End-to-end AWS (tunnel)", "tool": "Playwright", "count": 8, "passed": 8,
+            {"suite": "Bout en bout — serveur AWS (tunnel)", "tool": "Playwright", "count": 8, "passed": 8,
              "command": "E2E_BASE_URL=http://127.0.0.1:8091 npm run test:e2e"},
         ],
         "security_scans": [
-            {"tool": "Bandit", "before": 1, "after": 0, "note": "1 faux positif B105 annoté"},
-            {"tool": "pip-audit", "before": 24, "after": 0, "note": "Starlette 0.41.3 (7) + PyJWT 2.10.1 (17)"},
-            {"tool": "npm audit", "before": 3, "after": 0, "note": "outillage Vitest 3 (dev)"},
-            {"tool": "Trivy image", "before": 3, "after": 0, "note": "zlib1g, wheel, jaraco.context (HIGH)"},
-            {"tool": "Trivy config", "before": 1, "after": 0, "note": "nginx exécuté en root (DS-0002)"},
-            {"tool": "OWASP ZAP", "before": 0, "after": 0, "note": "0 FAIL, 60 PASS, 2 WARN documentés"},
+            {"tool": "Bandit", "scope": "code Python de l'API", "result": "aucun problème"},
+            {"tool": "pip-audit", "scope": "dépendances Python", "result": "aucune vulnérabilité connue"},
+            {"tool": "npm audit", "scope": "dépendances JavaScript", "result": "aucune vulnérabilité"},
+            {"tool": "Trivy", "scope": "image API, Dockerfiles, compose", "result": "0 HIGH/CRITICAL corrigeable, aucun secret"},
+            {"tool": "OWASP ZAP", "scope": "console + API", "result": "0 échec, 60 contrôles réussis, 2 avertissements documentés"},
         ],
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)

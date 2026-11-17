@@ -1,7 +1,7 @@
 /**
  * Captures the console pages for the README / report (real data, real API).
  * Usage: E2E_USER=… E2E_PASSWORD=… npx tsx e2e/screenshots.ts  (or node --experimental-strip-types)
- * Output: ../capture/<date>/v2-*.png
+ * Output: ../capture/<date>/console-*.png (SHOT_PREFIX=aws for the server)
  */
 import { chromium } from "@playwright/test";
 import { mkdirSync } from "node:fs";
@@ -10,7 +10,7 @@ import { join } from "node:path";
 const BASE = process.env.E2E_BASE_URL ?? "http://127.0.0.1:5173";
 const OUT = join(process.cwd(), "..", "capture", new Date().toISOString().slice(0, 10));
 mkdirSync(OUT, { recursive: true });
-const PREFIX = process.env.SHOT_PREFIX ?? "v2";
+const PREFIX = process.env.SHOT_PREFIX ?? "console";
 const shot = (f: string) => join(OUT, f.replace(/^v2/, PREFIX));
 
 const browser = await chromium.launch({ channel: process.env.E2E_CHANNEL ?? "chrome" });
