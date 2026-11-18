@@ -1,142 +1,131 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Empty, ErrorBox, Loading, PageTitle, Panel, Table, useApi } from "../components/ui";
-import { api, statusBadge } from "../lib/api";
+import { Link, useSearchParams } from "react-router-dom";
+import { api } from "../lib/api";
+import { fmtNum } from "../lib/format";
+import { DECISION_META, RISK_META, RISK_ORDER } from "../lib/meta";
+import { useApi } from "../lib/useApi";
+import { PageHeader } from "../components/ui/PageHeader";
+import { Card } from "../components/ui/Card";
+import { Kpi, KpiGrid } from "../components/ui/Kpi";
+import { Select, Toggle } from "../components/ui/Controls";
+import { AsyncBlock, EmptyState, SkeletonBlock } from "../components/ui/States";
+import { Badge, RiskBadge, StatusBadge, SyntheticTag, TypeTag } from "../components/ui/Badge";
+import { Pagination, Row, Table } from "../components/ui/Table";
+import { ScoreHistogram } from "../components/charts/Charts";
+import { ScoreBreakdownView } from "../components/domain/ScoreBreakdown";
 
-/**
- * Scoring page: shows the score distribution AND, for the selected IOC,
- * the full explainable breakdown (why the score is what it is).
- */
-export default function Scoring() {
-  const [selected, setSelected] = useState<string | null>(null);
-  const { data, error, loading } = useApi(
-    () => api.iocs("?sort=score_desc&limit=60"),
-    [],
+const LIMIT = 40;
+
+function ScoreCell({ score }: { score: number }) {
+  const color = score >= 80 ? "var(--color-ok)" : score >= 50 ? "var(--color-info)" : "var(--color-risk-low)";
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className="h-1.5 w-20 overflow-hidden rounded-full bg-surface-3" aria-hidden>
+        <div className="h-full rounded-full" style={{ width: `${score}%`, background: color }} />
+      </div>
+      <span className="num w-7 text-right font-semibold">{score}</span>
+    </div>
   );
-  const detail = useApi(() => (selected ? api.ioc(selected) : Promise.resolve(null)), [selected]);
+}
 
-  if (loading) return <Loading />;
-  if (error) return <ErrorBox error={error} />;
+export default function Scoring() {
+  const [params, setParams] = useSearchParams();
+  const risk = params.get("risk") ?? "";
+  const hideLab = params.get("lab") === "0";
+  const offset = Number(params.get("offset") ?? 0);
+  const [selected, setSelected] = useState<string | null>(null);
 
-  const ranked = (data?.items ?? []).filter((i) => i.score !== null);
-  const max = ranked[0]?.score ?? 100;
+  const stats = useApi(api.stats, []);
+  const qs = new URLSearchParams({ sort: "score_desc", limit: String(LIMIT), offset: String(offset) });
+  if (risk) qs.set("risk", risk);
+  if (hideLab) qs.set("synthetic", "false");
+  const ranked = useApi(() => api.iocs(`?${qs}`), [qs.toString()]);
+  const detail = useApi(() => api.ioc(selected!), [selected], { enabled: !!selected });
+  const funnel = useApi(api.funnel, []);
 
+  const set = (patch: Record<string, string | null>) => {
+    const next = new URLSearchParams(params);
+    for (const [k, v] of Object.entries(patch)) (v ? next.set(k, v) : next.delete(k));
+    if (!("offset" in patch)) next.delete("offset");
+    setParams(next, { replace: true });
+  };
+
+  const s = stats.data;
   return (
     <>
-      <PageTitle
-        title="IOC Scoring"
-        subtitle="Score explicable : chaque composante est pondérée et justifiée (politique v1)."
+      <PageHeader
+        title="Scoring & Risk Analysis"
+        description="Score de confiance explicable (5 composantes pondérées, pénalités de faux positifs). Les seuils publish / monitor / reject sont appliqués par l'API et chaque décision conserve sa justification."
+        updatedAt={ranked.updatedAt}
+        onRefresh={() => { stats.refresh(); ranked.refresh(); funnel.refresh(); detail.refresh(); }}
       />
 
-      <div className="grid grid-cols-4 gap-4 mb-5">
-        {[
-          { l: "≥ 80 → publication auto", c: "text-green-400", f: (s: number) => s >= 80 },
-          { l: "65-79 → haut risque", c: "text-amber-400", f: (s: number) => s >= 65 && s < 80 },
-          { l: "50-64 → surveillance", c: "text-sky-400", f: (s: number) => s >= 50 && s < 65 },
-          { l: "< 50 → rejet", c: "text-red-400", f: (s: number) => s < 50 },
-        ].map((b) => (
-          <div className="card" key={b.l}>
-            <div className={`kpi-value ${b.c}`}>{ranked.filter((i) => b.f(i.score!)).length}</div>
-            <div className="kpi-label">{b.l}</div>
-          </div>
+      <KpiGrid cols="grid-cols-2 md:grid-cols-4">
+        {(["publish", "monitor", "reject", "review"] as const).map((k) => (
+          <Kpi key={k} label={`Décision : ${DECISION_META[k].label}`} value={fmtNum(funnel.data?.decisions[k])}
+            hint={DECISION_META[k].rule} tone={`var(--color-${DECISION_META[k].tone === "ok" ? "ok" : DECISION_META[k].tone === "info" ? "info" : DECISION_META[k].tone === "danger" ? "danger" : "warn"})`} />
         ))}
+      </KpiGrid>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-2" title="Distribution des scores" subtitle={s?.avg_score !== undefined && s?.avg_score !== null ? `Score moyen ${fmtNum(s.avg_score)} · seuils : 50 (surveillance) et 80 (publication)` : undefined}>
+          {s ? (Object.values(s.score_distribution).some(Boolean) ? <ScoreHistogram buckets={s.score_distribution} /> : <EmptyState title="Aucun IOC noté" />) : <SkeletonBlock rows={6} />}
+        </Card>
+        <Card title="Barème de décision">
+          <ul className="space-y-3 text-[12.5px]">
+            {(["publish", "monitor", "reject", "review"] as const).map((k) => (
+              <li key={k} className="flex items-start gap-3">
+                <Badge tone={DECISION_META[k].tone} dot>{DECISION_META[k].label}</Badge>
+                <span className="text-fg-muted">{k === "publish" ? "Score ≥ 80 : publié vers la liste de détection, puis relu avant d'être marqué vérifié."
+                  : k === "monitor" ? "50 ≤ score < 80 : suivi, rapproché des alertes, sans blocage."
+                  : k === "reject" ? "Score < 50 : écarté, la justification reste consultable."
+                  : "Cas ambigu : attend une décision analyste (transition manuelle tracée)."}</span>
+              </li>
+            ))}
+          </ul>
+          <h3 className="eyebrow mb-2 mt-5">Niveau de risque</h3>
+          <ul className="space-y-1.5 text-[12.5px]">
+            {RISK_ORDER.map((r) => (
+              <li key={r} className="flex justify-between"><RiskBadge risk={r} /><span className="text-fg-muted">{r === "CRITICAL" ? "≥ 80" : r === "HIGH" ? "65 – 79" : r === "MEDIUM" ? "50 – 64" : "< 50"}</span></li>
+            ))}
+          </ul>
+        </Card>
       </div>
 
-      <div className="grid lg:grid-cols-5 gap-5">
-        <Panel title="Classement par score (60 premiers)" className="lg:col-span-3">
-          {ranked.length === 0 && <Empty text="Aucun IOC scoré." />}
-          <Table head={["#", "Valeur", "Score", "Statut", "Détections"]}>
-            {ranked.map((i, idx) => (
-              <tr
-                key={i.id}
-                className={`hover:bg-white/5 cursor-pointer ${selected === i.id ? "bg-signal/10" : ""}`}
-                onClick={() => setSelected(i.id)}
-              >
-                <td className="table-td text-muted">{idx + 1}</td>
-                <td className="table-td mono break-all">{i.value}</td>
-                <td className="table-td w-40">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-2 rounded bg-void border border-edge overflow-hidden">
-                      <div
-                        className={`h-full ${i.score! >= 80 ? "bg-green-500" : i.score! >= 50 ? "bg-sky-500" : "bg-red-500"}`}
-                        style={{ width: `${(i.score! / max) * 100}%` }}
-                      />
-                    </div>
-                    <span className="font-mono text-xs w-7 text-right">{i.score}</span>
-                  </div>
-                </td>
-                <td className="table-td"><span className={statusBadge(i.status)}>{i.status}</span></td>
-                <td className="table-td text-center font-mono">{i.detection_count}</td>
-              </tr>
-            ))}
-          </Table>
-        </Panel>
+      <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <Card bodyClass="" title="Classement par score"
+          actions={<div className="flex items-end gap-3">
+            <Toggle label="Sans lab" checked={hideLab} onChange={(v) => set({ lab: v ? "0" : null })} />
+            <Select label="Risque" value={risk} className="w-36" onChange={(v) => set({ risk: v })}
+              options={[{ value: "", label: "Tous" }, ...RISK_ORDER.map((r) => ({ value: r, label: RISK_META[r].label }))]} />
+          </div>}>
+          <AsyncBlock state={ranked} rows={10}>
+            {(d) => d.items.filter((i) => i.score !== null).length === 0 ? <EmptyState title="Aucun IOC noté pour ces filtres" /> : (
+              <>
+                <Table minWidth={760} columns={[{ key: "r", label: "#", align: "right" }, { key: "v", label: "Indicateur" }, { key: "s", label: "Score" }, { key: "k", label: "Risque" }, { key: "st", label: "Statut" }, { key: "d", label: "Dét.", align: "center" }]}>
+                  {d.items.filter((i) => i.score !== null).map((i, idx) => (
+                    <Row key={i.id} onClick={() => setSelected(i.id)} selected={selected === i.id}>
+                      <td className="td num text-right text-fg-subtle">{offset + idx + 1}</td>
+                      <td className="td max-w-[300px]"><span className="flex items-center gap-2"><TypeTag type={i.type} /><span className="truncate font-mono text-[12.5px]">{i.value}</span>{i.is_synthetic && <SyntheticTag />}</span></td>
+                      <td className="td"><ScoreCell score={i.score!} /></td>
+                      <td className="td"><RiskBadge risk={i.risk_level} /></td>
+                      <td className="td"><StatusBadge status={i.status} /></td>
+                      <td className="td num text-center">{i.detection_count}</td>
+                    </Row>
+                  ))}
+                </Table>
+                <Pagination total={d.total} offset={offset} limit={LIMIT} onChange={(o) => set({ offset: String(o) })} />
+              </>
+            )}
+          </AsyncBlock>
+        </Card>
 
-        <Panel title="Détail explicatif" className="lg:col-span-2">
-          {!selected && (
-            <p className="text-muted text-sm italic">
-              Sélectionnez un IOC pour voir le détail de son score (composantes, pénalités,
-              décision).
-            </p>
-          )}
-          {selected && detail.loading && <Loading />}
-          {selected && detail.error ? <ErrorBox error={detail.error} /> : null}
-          {selected && detail.data && (
-            <div>
-              <div className="mb-3">
-                <Link to={`/iocs/${detail.data.id}`} className="mono text-signal hover:underline break-all">
-                  {detail.data.value}
-                </Link>
-                <div className="mt-1 flex gap-2 items-center">
-                  <span className="text-3xl font-bold">{detail.data.score ?? "—"}</span>
-                  <span className={detail.data.risk_level ? "badge badge-bad" : "badge badge-info"}>
-                    {detail.data.risk_level ?? "non évalué"}
-                  </span>
-                  <span className={statusBadge(detail.data.status)}>{detail.data.status}</span>
-                </div>
-              </div>
-
-              {detail.data.score_breakdown ? (
-                <>
-                  <div className="text-[11px] uppercase text-muted mb-2">
-                    Politique {detail.data.score_breakdown.policy_version} · décision{" "}
-                    <b className="text-signal">{detail.data.score_breakdown.decision}</b>
-                  </div>
-                  <ul className="space-y-2">
-                    {detail.data.score_breakdown.components.map((c) => (
-                      <li key={c.key} className="border border-edge rounded-lg p-2.5 bg-void/60">
-                        <div className="flex justify-between text-sm">
-                          <span className="font-semibold">{c.label}</span>
-                          <span className="mono">
-                            +{c.points}/{c.max_points}
-                          </span>
-                        </div>
-                        <div className="h-1.5 rounded bg-panel mt-1.5 overflow-hidden">
-                          <div
-                            className="h-full bg-signal"
-                            style={{ width: `${(c.points / c.max_points) * 100}%` }}
-                          />
-                        </div>
-                        <div className="text-xs text-muted mt-1">{c.explanation}</div>
-                      </li>
-                    ))}
-                    {detail.data.score_breakdown.penalties.map((c) => (
-                      <li key={c.key} className="border border-red-900 rounded-lg p-2.5 bg-red-950/40">
-                        <div className="flex justify-between text-sm text-red-300">
-                          <span className="font-semibold">{c.label}</span>
-                          <span className="mono">{c.points}</span>
-                        </div>
-                        <div className="text-xs text-red-200/70 mt-1">{c.explanation}</div>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              ) : (
-                <p className="text-muted text-sm">IOC non encore scoré.</p>
-              )}
-            </div>
-          )}
-        </Panel>
+        <Card title="Justification" subtitle={detail.data ? <Link to={`/iocs/${detail.data.id}`} className="font-mono hover:text-accent-strong">{detail.data.value}</Link> : "Sélectionnez un IOC dans le classement"}>
+          {!selected ? <EmptyState title="Aucun IOC sélectionné">Chaque composante du score est affichée avec ses points et son explication.</EmptyState>
+            : <AsyncBlock state={detail} rows={8}>
+                {(x) => x.score_breakdown ? <ScoreBreakdownView breakdown={x.score_breakdown} /> : <EmptyState title="Pas de détail de score stocké" />}
+              </AsyncBlock>}
+        </Card>
       </div>
     </>
   );

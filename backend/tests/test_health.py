@@ -54,7 +54,6 @@ class TestConfiguration:
 class TestLogging:
     def test_json_formatter_emits_one_json_object(self) -> None:
         import json
-        import time
 
         setup_logging("INFO")
         logger = logging.getLogger("test.json")

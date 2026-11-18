@@ -5,7 +5,6 @@ Live verification of both integrations was performed separately (real API).
 """
 from __future__ import annotations
 
-import json
 
 import httpx
 import pytest

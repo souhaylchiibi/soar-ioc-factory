@@ -12,7 +12,7 @@
           ]
         }
       },
-      "id": "3f9382ca-ec0b-457f-a6c0-b824100daa6b",
+      "id": "a1065dff-c101-4950-ac42-01603ba1b0f3",
       "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -32,11 +32,19 @@
             {
               "name": "Accept",
               "value": "application/json"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.SOAR_SERVICE_API_KEY }}"
+            },
+            {
+              "name": "X-Actor",
+              "value": "workflow-2"
             }
           ]
         }
       },
-      "id": "d0be27e2-ccc6-4600-8444-bf6cc710800a",
+      "id": "d82a391f-750a-4b8a-985e-4f196da1c5dd",
       "name": "Reconcile NEW records",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -55,7 +63,7 @@
         "height": 160,
         "width": 340
       },
-      "id": "9f12e702-4649-471e-bead-2869366ea985",
+      "id": "a74a5fc4-8b54-48f7-9d33-8124698e579e",
       "name": "Doc",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -70,7 +78,7 @@
         "height": 160,
         "width": 340
       },
-      "id": "8de1fa1a-8fb8-4fbf-83a7-468327f1dbf4",
+      "id": "de8c0ecd-c92d-4913-8030-0ef060f7a016",
       "name": "On Error",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -81,7 +89,7 @@
     },
     {
       "parameters": {},
-      "id": "1a91885b-f6ca-4191-8721-01197d748515",
+      "id": "40622dc7-5a4b-4cdd-b211-c93f8e686d85",
       "name": "Manual Trigger",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,

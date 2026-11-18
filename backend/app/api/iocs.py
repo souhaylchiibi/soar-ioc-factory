@@ -1,6 +1,7 @@
 """IOC API — the surface consumed by the dashboard and by n8n workflows."""
 from __future__ import annotations
 
+import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -12,24 +13,25 @@ from sqlalchemy.orm import Session
 from app.collectors.base import RawIndicator
 from app.core.db import get_db
 from app.core.logging import get_logger
+from app.core.security import Principal, require_analyst
 from app.lifecycle.machine import LifecycleError, transition
 from app.models.ioc import (
     AuditLog,
+    IntelSource,
     Ioc,
     IocSource,
     IocStatus,
-    IntelSource,
     LifecycleEvent,
     ScoreHistory,
 )
 from app.schemas.ioc import (
     DashboardStats,
-    IocDetail,
-    IocListResponse,
-    IocOut,
     IngestRequest,
     IngestResponse,
     IngestResult,
+    IocDetail,
+    IocListResponse,
+    IocOut,
     LifecycleEventOut,
     ScoringRunRequest,
     ScoringRunResponse,
@@ -37,8 +39,8 @@ from app.schemas.ioc import (
     SourceStat,
     TransitionRequest,
 )
-from app.services.pipeline import run_full_pipeline, score_and_decide
 from app.services.ingest import ingest_raw
+from app.services.pipeline import score_and_decide
 
 logger = get_logger("soar.api.iocs")
 router = APIRouter(prefix="/iocs", tags=["iocs"])
@@ -46,7 +48,8 @@ router = APIRouter(prefix="/iocs", tags=["iocs"])
 
 # ------------------------------------------------------------------ ingest --
 @router.post("/ingest", response_model=IngestResponse)
-def ingest(body: IngestRequest, db: Session = Depends(get_db)) -> IngestResponse:
+def ingest(body: IngestRequest, db: Session = Depends(get_db),
+           principal: Principal = Depends(require_analyst)) -> IngestResponse:
     """Stage 1-2 of the factory: normalize + deduplicate a batch."""
     results: list[IngestResult] = []
     # Key must match IngestResponse field names (duplicates, not duplicate).
@@ -66,7 +69,7 @@ def ingest(body: IngestRequest, db: Session = Depends(get_db)) -> IngestResponse
             is_synthetic=item.is_synthetic,
         )
         raw.context = {k: v for k, v in raw.context.items() if v is not None}
-        outcome = ingest_raw(db, raw, actor="api")
+        outcome = ingest_raw(db, raw, actor=principal.actor)
         key = "duplicates" if outcome.action == "duplicate" else outcome.action
         counts[key] = counts.get(key, 0) + 1
         results.append(IngestResult(
@@ -80,8 +83,10 @@ def ingest(body: IngestRequest, db: Session = Depends(get_db)) -> IngestResponse
 
 # ------------------------------------------------------------------- read ---
 def _ioc_filters(status: Optional[IocStatus], ioc_type: Optional[str], q: Optional[str],
-                 synthetic: Optional[bool]):
+                 synthetic: Optional[bool], risk: Optional[str] = None):
     clauses = []
+    if risk:
+        clauses.append(Ioc.risk_level == risk)
     if status is not None:
         clauses.append(Ioc.status == status)
     if ioc_type:
@@ -100,11 +105,12 @@ def list_iocs(
     type: Optional[str] = Query(None, pattern="^(IP|DOMAIN|URL|HASH_MD5|HASH_SHA1|HASH_SHA256)$"),
     q: Optional[str] = Query(None, max_length=200),
     synthetic: Optional[bool] = None,
-    sort: str = Query("last_seen_desc", pattern="^(last_seen_desc|score_desc|score_asc|expires_asc)$"),
+    risk: Optional[str] = Query(None, pattern="^(LOW|MEDIUM|HIGH|CRITICAL)$"),
+    sort: str = Query("last_seen_desc", pattern="^(last_seen_desc|last_seen_asc|score_desc|score_asc|expires_asc|expires_desc|value_asc|value_desc)$"),
     offset: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
 ) -> IocListResponse:
-    clauses = _ioc_filters(status, type, q, synthetic)
+    clauses = _ioc_filters(status, type, q, synthetic, risk)
 
     total = db.execute(select(func.count(Ioc.id)).where(*clauses)).scalar() or 0
 
@@ -113,16 +119,29 @@ def list_iocs(
         "score_desc": Ioc.score.desc().nulls_last(),
         "score_asc": Ioc.score.asc().nulls_last(),
         "expires_asc": Ioc.expires_at.asc().nulls_last(),
+        "last_seen_asc": Ioc.last_seen_at.asc(),
+        "expires_desc": Ioc.expires_at.desc().nulls_last(),
+        "value_asc": Ioc.value.asc(),
+        "value_desc": Ioc.value.desc(),
     }[sort]
 
     rows = db.execute(
-        select(Ioc).where(*clauses).order_by(order).offset(offset).limit(limit)
+        # id as tie-breaker: stable pages when many rows share the sort key
+        select(Ioc).where(*clauses).order_by(order, Ioc.id).offset(offset).limit(limit)
     ).scalars().all()
+
+    # One grouped query for the whole page (was one query per row).
+    counts = dict(db.execute(
+        select(IocSource.ioc_id, func.count(func.distinct(IntelSource.provenance_group)))
+        .join(IntelSource, IntelSource.id == IocSource.source_id)
+        .where(IocSource.ioc_id.in_([i.id for i in rows]))
+        .group_by(IocSource.ioc_id)
+    ).all()) if rows else {}
 
     items = []
     for ioc in rows:
         out = IocOut.model_validate(ioc)
-        out.independent_source_count = _independent_count(db, ioc.id)
+        out.independent_source_count = int(counts.get(ioc.id, 0))
         items.append(out)
 
     return IocListResponse(total=total, offset=offset, limit=limit, items=items)
@@ -161,7 +180,8 @@ def get_ioc(ioc_id: uuid.UUID, db: Session = Depends(get_db)) -> IocDetail:
 
 # ----------------------------------------------------------------- actions --
 @router.post("/{ioc_id}/transition", response_model=LifecycleEventOut)
-def manual_transition(ioc_id: uuid.UUID, body: TransitionRequest, db: Session = Depends(get_db)) -> LifecycleEventOut:
+def manual_transition(ioc_id: uuid.UUID, body: TransitionRequest, db: Session = Depends(get_db),
+                      principal: Principal = Depends(require_analyst)) -> LifecycleEventOut:
     """Manual lifecycle change (analyst/admin action, always audited)."""
     ioc = db.get(Ioc, ioc_id)
     if ioc is None:
@@ -169,15 +189,15 @@ def manual_transition(ioc_id: uuid.UUID, body: TransitionRequest, db: Session = 
     try:
         result = transition(
             ioc, body.to_status, reason=body.reason,
-            actor=body.actor, triggered_by="manual-api",
+            actor=principal.actor, triggered_by="manual-api",
             verified=body.verified,
         )
     except LifecycleError as exc:
-        raise HTTPException(status_code=409, detail=str(exc))
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     db.add(result.event)
     db.add(AuditLog(
-        actor=body.actor, action="TRANSITION", entity_type="ioc", entity_id=str(ioc.id),
+        actor=principal.actor, role=principal.role, action="TRANSITION", entity_type="ioc", entity_id=str(ioc.id),
         detail={"from": result.from_status.value, "to": result.to_status.value,
                 "reason": body.reason},
     ))
@@ -186,7 +206,8 @@ def manual_transition(ioc_id: uuid.UUID, body: TransitionRequest, db: Session = 
 
 
 @router.post("/scoring/run", response_model=ScoringRunResponse)
-def run_scoring(body: ScoringRunRequest, db: Session = Depends(get_db)) -> ScoringRunResponse:
+def run_scoring(body: ScoringRunRequest, db: Session = Depends(get_db),
+                principal: Principal = Depends(require_analyst)) -> ScoringRunResponse:
     """Batch scoring — called by n8n workflow 4."""
     clauses = []
     if body.ioc_ids:
@@ -194,11 +215,12 @@ def run_scoring(body: ScoringRunRequest, db: Session = Depends(get_db)) -> Scori
     elif body.only_status is not None:
         clauses.append(Ioc.status == body.only_status)
 
+    t0 = time.perf_counter()
     targets = db.execute(select(Ioc).where(*clauses).limit(500)).scalars().all()
 
     resp = ScoringRunResponse()
     for ioc in targets:
-        report = score_and_decide(db, ioc, actor="workflow-4", triggered_by="workflow-4")
+        report = score_and_decide(db, ioc, actor=principal.actor, triggered_by=principal.actor)
         if report.score is None:
             continue
         resp.scored += 1
@@ -212,6 +234,12 @@ def run_scoring(body: ScoringRunRequest, db: Session = Depends(get_db)) -> Scori
             "ioc_id": str(ioc.id), "value": ioc.value, "score": report.score,
             "decision": report.decision, "explanation": report.score_explanation,
         })
+    db.add(AuditLog(
+        actor=principal.actor, role=principal.role, action="SCORE", entity_type="batch",
+        detail={"targets": len(targets), "scored": resp.scored, "published": resp.published,
+                "monitored": resp.monitored, "rejected": resp.rejected,
+                "duration_ms": int((time.perf_counter() - t0) * 1000)},
+    ))
     db.commit()
     return resp
 

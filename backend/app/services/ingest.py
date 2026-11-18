@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 from app.collectors.base import RawIndicator
 from app.core.logging import get_logger
 from app.lifecycle.machine import transition
-from app.models.ioc import AuditLog, Ioc, IocSource, IocStatus, IocType, LifecycleEvent
+from app.models.ioc import AuditLog, Ioc, IocSource, IocStatus, IocType
 from app.services.normalization import NormalizationError, normalize
 
 logger = get_logger("soar.ingest")

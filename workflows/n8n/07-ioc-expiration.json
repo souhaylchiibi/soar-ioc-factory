@@ -12,7 +12,7 @@
           ]
         }
       },
-      "id": "a9ad8322-8a26-47bd-9c13-1924e51bb1fc",
+      "id": "4b246eaa-705f-4eba-98f2-77c8a7952674",
       "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -32,11 +32,19 @@
             {
               "name": "Accept",
               "value": "application/json"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.SOAR_SERVICE_API_KEY }}"
+            },
+            {
+              "name": "X-Actor",
+              "value": "workflow-7"
             }
           ]
         }
       },
-      "id": "27f89d99-4337-44d9-86d1-ceb8f30eeee8",
+      "id": "c27b8d5f-02ec-4b2b-81e5-0d79f3175c37",
       "name": "Step 1: mark EXPIRED",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -60,11 +68,19 @@
             {
               "name": "Accept",
               "value": "application/json"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.SOAR_SERVICE_API_KEY }}"
+            },
+            {
+              "name": "X-Actor",
+              "value": "workflow-7"
             }
           ]
         }
       },
-      "id": "1dd1d38c-0a3f-469f-a0ed-849937286ae6",
+      "id": "c657d9b8-1c4d-4d76-9d3a-232b973dfb46",
       "name": "Step 2: revoke + REMOVED",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -83,7 +99,7 @@
         "height": 160,
         "width": 340
       },
-      "id": "ae5fb872-deea-44de-a0c4-e686fc8a0045",
+      "id": "cbc32418-8da1-4a0e-9f16-7ce8728776ff",
       "name": "Doc",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -98,7 +114,7 @@
         "height": 160,
         "width": 340
       },
-      "id": "6b03e95e-532c-4d36-bebb-7a4a8a54004a",
+      "id": "6d65cf57-088c-4f2e-bce9-8b4a794141e5",
       "name": "On Error",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -109,7 +125,7 @@
     },
     {
       "parameters": {},
-      "id": "59bbcdf2-e4b6-4917-8b26-6fb06b5ba571",
+      "id": "e91e33cd-ffcd-4140-b46d-bf0edddbc730",
       "name": "Manual Trigger",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,

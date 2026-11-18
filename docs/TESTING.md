@@ -1,6 +1,6 @@
 # Tests — stratégie, exécution, couverture réelle
 
-> **192 tests, 192 au vert** (≈ 38 s), exécutés contre un **vrai PostgreSQL**
+> **224 tests backend au vert** (≈ 65 s), exécutés contre un **vrai PostgreSQL**
 > migré par Alembic. Aucun mock de base de données.
 
 ---
@@ -35,7 +35,7 @@ $env:POSTGRES_PASSWORD=(Select-String -Path ..\.env -Pattern '^POSTGRES_PASSWORD
 Résultat attendu :
 
 ```
-192 passed in ~38s
+224 passed in ~65s
 ```
 
 Options utiles :
@@ -56,7 +56,7 @@ Options utiles :
 
 ---
 
-## 3. Répartition des 192 tests
+## 3. Répartition des tests (224 backend + 31 frontend)
 
 | Module | Tests | Ce qui est prouvé |
 |---|---:|---|
@@ -70,7 +70,19 @@ Options utiles :
 | `test_abusech.py` | 14 | URLhaus/ThreatFox/MalwareBazaar hors ligne : GET vs POST, clé refusée, parsing |
 | `test_pipeline.py` | 11 | pipeline complet, reprise, décisions, expiration/retrait |
 | `test_health.py` | 7 | `/health`, `/ready`, `/system/health`, dégradations |
-| **Total** | **192** | |
+| `test_auth_api.py` | 22 | authentification, rôles, verrouillage, clé de service, traversée de chemin, rate limit, en-têtes, garde de production |
+| `test_soc_api.py` | 10 | funnel, timeline, Detection Center + triage, historique d'exécutions, dossier IOC, recherche, notifications, intégrations |
+| **Total backend** | **224** | |
+
+### Frontend
+
+| Suite | Outil | Tests | Ce qui est prouvé |
+|---|---|---:|---|
+| `src/lib/format.test.ts` | Vitest | 4 | aucune valeur inventée (`—`, « non mesurée »), formats français, durées |
+| `src/components/ui/components.test.tsx` | Vitest + RTL | 8 | badges explicites, état d'erreur HTTP + réessai, état vide, pagination |
+| `src/pages/pages.test.tsx` | Vitest + RTL | 11 | login (succès, 401 générique, 423), redirection anonyme, Overview = chiffres de l'API ou erreur, filtres d'URL, triage avec confirmation, actions masquées aux lecteurs, rapport d'échec d'opération |
+| `e2e/console.spec.ts` | Playwright (Chrome) | 8 | pile réelle : redirection, login, KPI = API, 9 pages sans erreur ni débordement, liens directs (rechargement) des 10 pages, recherche `Ctrl K` → dossier IOC, filtres → URL, tiroir mobile |
+| **Total frontend** | | **31** | |
 
 ---
 
@@ -155,7 +167,7 @@ Client REST testé avec un transport simulé (aucun appel réseau) :
 
 | Élément | Pourquoi | Comment c'est couvert |
 |---|---|---|
-| Interface React | pas de tests unitaires frontend | `tsc -b` + `vite build` sans erreur, 13 routes vérifiées manuellement, 0 erreur console (captures) |
+| Rendu visuel exact (pixels) | pas de tests de régression visuelle | Playwright vérifie structure, données, absence d'erreur et de débordement ; contrôle visuel manuel desktop + mobile |
 | Appels réels OTX / AbuseIPDB / MISP | dépendances réseau et quotas | tests avec transport simulé ; exécution réelle tracée dans le rapport |
 | Charge / performance | hors périmètre académique | mesure ponctuelle : 21 809 scores/s (moteur), 1,32 IOC/s (lot complet) |
 | Reprise après coupure brutale | difficile à scripter proprement | testé manuellement (crash Docker Desktop du 07/11, données intactes) |

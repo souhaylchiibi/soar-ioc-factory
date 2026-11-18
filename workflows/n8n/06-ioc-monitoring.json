@@ -12,7 +12,7 @@
           ]
         }
       },
-      "id": "08b5f7cb-bbd9-44d1-8f3c-5059270fa43c",
+      "id": "df4c0a4c-2e1b-4e6a-be28-f8d6b306bc13",
       "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -32,11 +32,19 @@
             {
               "name": "Accept",
               "value": "application/json"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.SOAR_SERVICE_API_KEY }}"
+            },
+            {
+              "name": "X-Actor",
+              "value": "workflow-6"
             }
           ]
         }
       },
-      "id": "66103d33-c32b-4686-b38d-28590ad132f2",
+      "id": "814d1a0f-4272-4f41-901f-452295e677b6",
       "name": "Ingest Suricata alerts",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -60,11 +68,19 @@
             {
               "name": "Accept",
               "value": "application/json"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.SOAR_SERVICE_API_KEY }}"
+            },
+            {
+              "name": "X-Actor",
+              "value": "workflow-6"
             }
           ]
         }
       },
-      "id": "e8c2c6f6-85cc-42b7-828e-4008b59e32f3",
+      "id": "35c09064-beaf-489a-82ec-c74b2bdaf3d9",
       "name": "Ingest Wazuh alerts",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -88,11 +104,19 @@
             {
               "name": "Accept",
               "value": "application/json"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.SOAR_SERVICE_API_KEY }}"
+            },
+            {
+              "name": "X-Actor",
+              "value": "workflow-6"
             }
           ]
         }
       },
-      "id": "3c49897d-7d69-4cb9-8aa2-0cb6955eb4da",
+      "id": "bbd53b3c-e8f2-4bef-8f67-0a09455bb2f3",
       "name": "Fetch recent detections",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -111,7 +135,7 @@
         "height": 160,
         "width": 340
       },
-      "id": "2ce9936d-ee3d-4837-9698-e0494d121829",
+      "id": "e6944e2c-944a-46b3-9525-7c9d51cb4317",
       "name": "Doc",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -126,7 +150,7 @@
         "height": 160,
         "width": 340
       },
-      "id": "564c450e-3873-4a7a-8d06-4e80e70cf240",
+      "id": "b1bb425c-511f-441a-a037-fab971d1eb49",
       "name": "On Error",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -137,7 +161,7 @@
     },
     {
       "parameters": {},
-      "id": "aa230425-1cfd-4948-abef-6b59bf0bb94a",
+      "id": "a6326824-5c88-43fb-a6b0-906711eb75f4",
       "name": "Manual Trigger",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,

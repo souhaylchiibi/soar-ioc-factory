@@ -25,6 +25,8 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=sa_text("TRUE"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    failed_logins: Mapped[int] = mapped_column(Integer, default=0, server_default=sa_text("0"), nullable=False)
+    locked_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
 
 class Report(Base):

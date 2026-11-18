@@ -260,6 +260,19 @@ def main() -> int:
     }
 
     for fname, wf in workflows:
+        # --- authenticate every API call ---------------------------------
+        # The key is read from n8n's environment at run time ($env), so the
+        # exported JSON never contains the secret. X-Actor labels the audit
+        # trail with the workflow number (workflow-N).
+        actor = f"workflow-{int(fname[:2])}"
+        for node in wf["nodes"]:
+            if node["type"] != "n8n-nodes-base.httpRequest":
+                continue
+            headers = node["parameters"]["headerParameters"]["parameters"]
+            headers[:] = [h for h in headers if h["name"] not in ("X-API-Key", "X-Actor")]
+            headers.append({"name": "X-API-Key", "value": "={{ $env.SOAR_SERVICE_API_KEY }}"})
+            headers.append({"name": "X-Actor", "value": actor})
+
         # --- inject Manual Trigger (required for `n8n execute` + UI run) ---
         action = next(n for n in wf["nodes"] if n["type"] == "n8n-nodes-base.httpRequest")
         manual = manual_trigger()

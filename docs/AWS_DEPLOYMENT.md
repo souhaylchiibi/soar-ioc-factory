@@ -204,7 +204,7 @@ Puis : **http://127.0.0.1:8091/** → dashboard SOC complet (13 pages).
 | 9 | Collecte réelle depuis EC2 | 94 IOC (OTX+feodo+blocklist+urlscan) ✅ |
 | 10 | Enrichissement (OTX+AbuseIPDB) | 25/25, 0 erreur ✅ |
 | 11 | Scoring | 73 monitor / 21 reject, moyenne 54,7 ✅ |
-| 12 | Dashboard via tunnel | capture `capture/11-aws-dashboard-ec2.jpg` ✅ |
+| 12 | Dashboard via tunnel | capture `capture/2026-11-17/aws-02-overview.png` ✅ |
 
 ---
 

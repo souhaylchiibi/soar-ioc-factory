@@ -169,7 +169,7 @@ docker run --rm --network soar-ioc-factory_soar-net `
 | 8 — Rapport | `BcgzzjDErMHIM05i` |
 
 Les 8 workflows ont été exécutés avec succès sur la plateforme réelle
-(capture `capture/05-phase4-n8n-automatisation.jpg`).
+(capture `capture/2026-11-17/console-09-automation.png`).
 
 ---
 

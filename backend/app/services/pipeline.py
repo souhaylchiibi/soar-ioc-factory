@@ -14,7 +14,6 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.collectors.base import RawIndicator
-from app.core.config import settings
 from app.core.logging import get_logger
 from app.enrichment.service import run_enrichment
 from app.lifecycle.machine import IocStatus, transition
@@ -23,7 +22,6 @@ from app.models.ioc import (
     Ioc,
     IocSource,
     IntelSource,
-    LifecycleEvent,
     ScoreHistory,
 )
 from app.scoring.engine import ScoringInput, compute_score

@@ -99,6 +99,10 @@ services:
       DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
       GENERIC_TIMEZONE: UTC
       N8N_DIAGNOSTICS_ENABLED: "false"   # pas de télémétrie dans un labo
+      # Clé de service lue par les workflows via {{ $env.SOAR_SERVICE_API_KEY }}
+      # (jamais écrite dans les JSON exportés).
+      SOAR_SERVICE_API_KEY: ${SERVICE_API_KEY:?SERVICE_API_KEY requis dans .env}
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
     volumes:
       - n8n_data:/home/node/.n8n
     ports:
